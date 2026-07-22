@@ -75,21 +75,36 @@ def score(euro: float, intent_pts: int) -> tuple[int, str]:
 INTENT_N2 = {"Alta": 15, "Media": 10, "Baja": 4}
 
 
-def score2(euro: float, intent_label: str, volume: int) -> tuple[int, str]:
-    """Nivel 2 (con demanda real): €/venta (45) + demanda (40) + intención (15).
+def score2(euro: float, intent_label: str, volume: int, kd=None) -> tuple[int, str]:
+    """Nivel 2: €/venta + demanda + (rankeabilidad si hay KD) + intención.
 
-    NO usa la competencia de Google Ads (venía HIGH/100 en todo → inútil para
-    diferenciar; además NO es dificultad SEO). La dificultad real para rankear
-    (KD) es un endpoint aparte, la siguiente capa. Topes altos para que un nicho
-    excepcional (mucho ticket Y mucha demanda) destaque de verdad:
-      · €/venta se satura a 15€ (una venta que paga como 5 freidoras)
-      · demanda log, se satura a ~100.000 búsq/mes
+    Topes altos para que un nicho excepcional (mucho ticket Y mucha demanda)
+    destaque: €/venta satura a 15€, demanda log satura a ~100.000 búsq/mes.
+    Cuando hay KD real (dificultad SEO 0-100, menor = más fácil), la
+    "rankeabilidad" (100−KD) entra en el score — es la pieza que dice si puedes
+    entrar. Sin KD, se reparte su peso entre €/venta y demanda.
     """
-    euro_pts = min(euro / 15.0, 1.0) * 45
-    demand_pts = min(math.log10(volume + 1) / 5.0, 1.0) * 40
     intent_pts = INTENT_N2.get(intent_label, 10)
-    total = round(max(0.0, min(100.0, euro_pts + demand_pts + intent_pts)))
+    if kd is not None:
+        euro_pts = min(euro / 15.0, 1.0) * 35
+        demand_pts = min(math.log10(volume + 1) / 5.0, 1.0) * 30
+        rank_pts = (100 - kd) / 100.0 * 25
+        total = round(max(0.0, min(100.0, euro_pts + demand_pts + rank_pts + intent_pts)))
+    else:
+        euro_pts = min(euro / 15.0, 1.0) * 45
+        demand_pts = min(math.log10(volume + 1) / 5.0, 1.0) * 40
+        total = round(max(0.0, min(100.0, euro_pts + demand_pts + intent_pts)))
     return total, _verd(total)
+
+
+# € potenciales/mes = techo optimista si rankeas bien. Supuestos conservadores,
+# editables: capturas ~4% de las búsquedas del término y ~3% compra en Amazon.
+CAPTURE = 0.04
+CONVERSION = 0.03
+
+
+def potencial_mes(volume: int, euro: float) -> float:
+    return volume * CAPTURE * CONVERSION * euro
 
 
 def _sparkline(monthly: list[int], color: str) -> str:
@@ -115,14 +130,16 @@ def _rows():
         for r in csv.DictReader(fh):
             raw.append((r["nicho"].strip(), r["categoria"].strip(), float(r["ticket_estimado"])))
 
-    # Nivel 2: demanda real en un solo lote (mock o live) si está configurado.
+    # Nivel 2: demanda + dificultad SEO en dos lotes (mock o live) si hay config.
     mode = dataforseo.available()
-    demand = {}
+    demand, kds = {}, {}
     if mode:
         try:
-            demand = dataforseo.search_volume([n for n, _, _ in raw])
+            kws = [n for n, _, _ in raw]
+            demand = dataforseo.search_volume(kws)
+            kds = dataforseo.keyword_difficulty(kws)
         except Exception as e:
-            print(f"aviso: demanda no disponible ({type(e).__name__}: {str(e)[:80]}) -> Nivel 1")
+            print(f"aviso: Nivel 2 no disponible ({type(e).__name__}: {str(e)[:80]}) -> Nivel 1")
             mode = ""
 
     out = []
@@ -131,14 +148,17 @@ def _rows():
         ilabel, ipts = intent_label(nicho)
         d = demand.get(nicho)
         if d:
-            sc, verd = score2(euro, ilabel, d["volume"])
-            vol, cpc, monthly, peak = d["volume"], d["cpc"], d.get("monthly") or [], d.get("peak") or ""
+            kd = kds.get(nicho)
+            sc, verd = score2(euro, ilabel, d["volume"], kd)
+            vol, cpc = d["volume"], d["cpc"]
+            monthly, peak = d.get("monthly") or [], d.get("peak") or ""
+            pot = potencial_mes(vol, euro)
         else:
             sc, verd = score(euro, ipts)
-            vol, cpc, monthly, peak = None, None, [], ""
+            vol, cpc, monthly, peak, kd, pot = None, None, [], "", None, None
         out.append(dict(nicho=nicho, cat=cat, com=com, ticket=ticket, euro=euro,
                         intent=ilabel, score=sc, verd=verd, vol=vol, cpc=cpc,
-                        monthly=monthly, peak=peak))
+                        monthly=monthly, peak=peak, kd=kd, pot=pot))
     out.sort(key=lambda x: x["score"], reverse=True)
     return out, mode
 
@@ -185,7 +205,7 @@ h1{font-size:26px;margin:8px 0 4px;letter-spacing:-.01em;text-wrap:balance}
   border-radius:12px;padding:12px 14px;font-size:13px;color:var(--ink);margin-bottom:22px;line-height:1.5}
 .note b{color:var(--accent)}
 .tablewrap{overflow-x:auto;background:var(--panel);border:1px solid var(--line);border-radius:14px}
-table{width:100%;border-collapse:collapse;min-width:820px}
+table{width:100%;border-collapse:collapse;min-width:900px}
 th,td{padding:12px 14px;text-align:right;border-bottom:1px solid var(--line);
   font-variant-numeric:tabular-nums;white-space:nowrap}
 tr:last-child td{border-bottom:0}
@@ -203,6 +223,18 @@ td.euro{font-weight:750;font-size:15px}
 .trend{display:flex;align-items:center;gap:8px}
 .trend svg{flex:0 0 auto;opacity:.85}
 .peak{font:600 10px/1 ui-monospace,monospace;color:var(--dim);text-transform:uppercase;letter-spacing:.03em;white-space:nowrap}
+.kd{font-weight:650;font-size:13px}
+.filters{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.flabel{font:600 11px/1 ui-monospace,monospace;text-transform:uppercase;letter-spacing:.08em;color:var(--dim)}
+.fbtn{font:600 12px/1 -apple-system,system-ui,sans-serif;padding:7px 13px;border-radius:99px;
+  border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer}
+.fbtn:hover{border-color:var(--accent)}
+.fbtn.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.fsearch{margin-left:auto;font-size:13px;padding:7px 12px;border-radius:9px;
+  border:1px solid var(--line);background:var(--panel);color:var(--ink);min-width:150px}
+.fsearch:focus{outline:2px solid var(--accent);outline-offset:1px}
+th{cursor:pointer;user-select:none}
+th:hover{color:var(--accent)}
 .chip{display:inline-block;font:650 11px/1 ui-monospace,monospace;letter-spacing:.02em;
   padding:5px 9px;border-radius:99px}
 .pend{color:var(--dim);opacity:.5}
@@ -229,6 +261,13 @@ def _inner() -> str:
     best = max(rows, key=lambda x: x["euro"])
     fuertes = sum(1 for r in rows if r["verd"] == "Fuerte")
 
+    def _kd_cell(kd):
+        if kd is None:
+            return "<span class='pend'>—</span>", -1
+        lab = "fácil" if kd < 30 else "media" if kd < 60 else "difícil"
+        col = "var(--good)" if kd < 30 else "var(--warn)" if kd < 60 else "var(--bad)"
+        return f"<span class='kd' style='color:{col}'>{kd} · {lab}</span>", kd
+
     trs = []
     for r in rows:
         fg, bg = _color(r["verd"])
@@ -242,18 +281,24 @@ def _inner() -> str:
             cpc = f"{r['cpc']:.2f}€" if r["cpc"] is not None else "—"
         else:
             trend, cpc = "<span class='pend'>—</span>", "<span class='pend'>—</span>"
+        kd_html, kd_sort = _kd_cell(r.get("kd"))
+        pot_html = (f"<b>{_miles(round(r['pot']))}€</b>" if r.get("pot") is not None
+                    else "<span class='pend'>—</span>")
+        pot_sort = r["pot"] if r.get("pot") is not None else -1
+        # data-* para ordenar en JS; data-verd para filtrar.
         trs.append(
-            f"<tr>"
+            f"<tr data-verd='{r['verd']}' data-nicho='{html.escape(r['nicho'])}'>"
             f"<td class='l nicho'>{html.escape(r['nicho'])}</td>"
             f"<td class='l cat'>{html.escape(r['cat'])}</td>"
-            f"<td>{r['com']:.1f}%</td>"
-            f"<td>{r['ticket']:.0f}€</td>"
-            f"<td class='euro'>{r['euro']:.2f}€</td>"
+            f"<td data-s='{r['com']}'>{r['com']:.1f}%</td>"
+            f"<td data-s='{r['ticket']}'>{r['ticket']:.0f}€</td>"
+            f"<td class='euro' data-s='{r['euro']}'>{r['euro']:.2f}€</td>"
             f"<td>{r['intent']}</td>"
-            f"<td>{dem}</td>"
+            f"<td data-s='{r['vol'] or 0}'>{dem}</td>"
             f"<td class='trendcell'>{trend}</td>"
-            f"<td>{cpc}</td>"
-            f"<td><div class='scorecell'>"
+            f"<td data-s='{kd_sort}'>{kd_html}</td>"
+            f"<td class='euro' data-s='{pot_sort}'>{pot_html}</td>"
+            f"<td data-s='{r['score']}'><div class='scorecell'>"
             f"<span class='bar'><i style='width:{r['score']}%;background:{fg}'></i></span>"
             f"<span class='scoren'>{r['score']}</span></div></td>"
             f"<td><span class='chip' style='color:{fg};background:{bg}'>{r['verd']}</span></td>"
@@ -263,23 +308,27 @@ def _inner() -> str:
     if n2:
         eyebrow = ("Nivel 2 · demanda real (DEMO)" if mode == "mock"
                    else "Nivel 2 · demanda real")
-        total_dem = sum(r["vol"] or 0 for r in rows)
-        kpi4 = (f"<div class='kpi'><div class='k'>Demanda total</div>"
-                f"<div class='v'>{_miles(total_dem)} <small>búsq/mes</small></div></div>")
+        pots = [r for r in rows if r.get("pot") is not None]
+        bestpot = max(pots, key=lambda x: x["pot"]) if pots else None
+        kpi4 = (f"<div class='kpi'><div class='k'>Potencial top</div>"
+                f"<div class='v'>{_miles(round(bestpot['pot']))}€ <small>{html.escape(bestpot['nicho'])}/mes</small></div></div>"
+                if bestpot else
+                f"<div class='kpi'><div class='k'>En verde</div><div class='v'>{fuertes} <small>de {n}</small></div></div>")
         if mode == "mock":
             note = ("<span>⚠</span><div><b>Datos de prueba (mock).</b> El pipeline "
                     "funciona; estas cifras de demanda son ficticias. Con tus credenciales "
                     "de DataForSEO en <code>.env</code> se rellenan con volumen real de España.</div>")
         else:
-            note = ("<span>✓</span><div><b>Nivel 2 activo · datos reales de España.</b> "
-                    "Demanda, tendencia (12&nbsp;meses), mes pico y CPC de DataForSEO. "
-                    "<b>Ojo:</b> el score aún NO mide si podrás <i>rankear</i> — la dificultad "
-                    "SEO real (KD) es la siguiente capa. La “tendencia” es la forma del año, "
-                    "y el “pico” te dice cuándo atacar.</div>")
-        lede = ("Qué nichos compensan de verdad: <b>dinero por venta</b> × <b>demanda real</b>, "
-                "con la estación en la que vende cada uno. Ordenado por score.")
-        foot = ("Score = €/venta (45, satura a 15€) + demanda (40, log, satura ~100k) + intención (15). "
-                "La competencia de Google&nbsp;Ads se omite (venía “alta” en todo y no es dificultad SEO).<br>"
+            note = ("<span>✓</span><div><b>Nivel 2 completo · datos reales de España.</b> "
+                    "Demanda, tendencia&nbsp;12m, mes pico, CPC y <b>dificultad SEO (KD)</b> de "
+                    "DataForSEO. <b>KD bajo = puedes rankear.</b> El <b>€/mes</b> es un techo "
+                    "optimista (si capturas ~4% de las búsquedas y ~3% compra). Toca una cabecera "
+                    "para reordenar; filtra por veredicto arriba.</div>")
+        lede = ("Qué nichos compensan de verdad: <b>paga</b> × <b>se busca</b> × <b>puedo rankear</b>. "
+                "Ordena y filtra a tu gusto.")
+        foot = ("Score = €/venta (35, satura 15€) + demanda (30, log, satura ~100k) + rankeabilidad "
+                "100−KD (25) + intención (10). €/mes = demanda × 4% captura × 3% conversión × €/venta "
+                "(supuestos editables en <code>radar.py</code>).<br>"
                 "Edita <code>nichos.csv</code> y la tabla <code>COMISIONES</code>, y vuelve a ejecutar.")
     else:
         eyebrow = "Nivel 1 · cribado gratis"
@@ -311,16 +360,65 @@ def _inner() -> str:
 
   <div class="note">{note}</div>
 
-  <div class="tablewrap"><table>
+  {'' if not n2 else '''<div class="filters">
+    <span class="flabel">Filtrar:</span>
+    <button class="fbtn on" data-f="all">Todos</button>
+    <button class="fbtn" data-f="Fuerte">Fuerte</button>
+    <button class="fbtn" data-f="Revisar">Revisar</button>
+    <button class="fbtn" data-f="Flojo">Flojo</button>
+    <input class="fsearch" type="search" placeholder="Buscar nicho…" aria-label="Buscar nicho">
+  </div>'''}
+
+  <div class="tablewrap"><table id="radar">
     <thead><tr>
       <th class="l">Nicho</th><th class="l">Categoría</th><th>Comisión</th><th>Ticket</th>
-      <th>€/venta</th><th>Intención</th><th>Demanda</th><th>Tendencia&nbsp;12m</th><th>CPC</th><th>Score</th><th>Veredicto</th>
+      <th>€/venta</th><th>Intención</th><th>Demanda</th><th>Tendencia&nbsp;12m</th>
+      <th>KD SEO</th><th>€/mes</th><th>Score</th><th>Veredicto</th>
     </tr></thead>
     <tbody>{''.join(trs)}</tbody>
   </table></div>
 
   <p class="foot">{foot}</p>
-</div>"""
+</div>
+<script>
+(function(){{
+  var table=document.getElementById('radar'); if(!table) return;
+  var tb=table.tBodies[0];
+  var rows=function(){{return Array.prototype.slice.call(tb.rows);}};
+  // Ordenar al tocar cabecera (numérico por data-s, texto si no).
+  var ths=table.tHead.rows[0].cells, dir={{}};
+  Array.prototype.forEach.call(ths,function(th,i){{
+    th.style.cursor='pointer'; th.title='Ordenar';
+    th.addEventListener('click',function(){{
+      var d=dir[i]=-(dir[i]||1);
+      rows().sort(function(a,b){{
+        var ca=a.cells[i], cb=b.cells[i];
+        var sa=ca.getAttribute('data-s'), sb=cb.getAttribute('data-s');
+        var va = sa!==null? parseFloat(sa) : ca.textContent.trim().toLowerCase();
+        var vb = sb!==null? parseFloat(sb) : cb.textContent.trim().toLowerCase();
+        if(va<vb) return -1*d; if(va>vb) return 1*d; return 0;
+      }}).forEach(function(r){{tb.appendChild(r);}});
+    }});
+  }});
+  // Filtrar por veredicto + búsqueda de texto.
+  var cur='all', q='';
+  function apply(){{
+    rows().forEach(function(r){{
+      var okV = cur==='all' || r.getAttribute('data-verd')===cur;
+      var okQ = !q || r.getAttribute('data-nicho').toLowerCase().indexOf(q)>=0;
+      r.style.display = (okV&&okQ)?'':'none';
+    }});
+  }}
+  document.querySelectorAll('.fbtn').forEach(function(b){{
+    b.addEventListener('click',function(){{
+      document.querySelectorAll('.fbtn').forEach(function(x){{x.classList.remove('on');}});
+      b.classList.add('on'); cur=b.getAttribute('data-f'); apply();
+    }});
+  }});
+  var s=document.querySelector('.fsearch');
+  if(s) s.addEventListener('input',function(){{q=s.value.trim().toLowerCase(); apply();}});
+}})();
+</script>"""
 
 
 def run() -> tuple[Path, Path]:

@@ -57,6 +57,35 @@ def _mock(keywords: list[str]) -> dict:
     return out
 
 
+def keyword_difficulty(keywords: list[str]) -> dict:
+    """keyword -> KD (0-100, menor = más fácil rankear). DataForSEO Labs."""
+    if os.environ.get("DATAFORSEO_MOCK") == "1":
+        return {kw: (sum(ord(c) for c in kw) % 70) + 5 for kw in keywords}
+    auth = _auth()
+    if not auth:
+        raise RuntimeError("Faltan credenciales DataForSEO")
+    body = json.dumps([{
+        "keywords": keywords,
+        "location_code": LOCATION_ES,
+        "language_code": LANGUAGE_ES,
+    }]).encode()
+    req = urllib.request.Request(
+        f"{BASE}/dataforseo_labs/google/bulk_keyword_difficulty/live",
+        data=body,
+        headers={"Authorization": auth, "Content-Type": "application/json"},
+    )
+    with urllib.request.urlopen(req, timeout=60) as r:
+        data = json.load(r)
+    out = {}
+    for task in data.get("tasks", []):
+        for res in (task.get("result") or []):
+            for row in (res.get("items") or []):
+                kw = row.get("keyword")
+                if kw:
+                    out[kw] = row.get("keyword_difficulty")
+    return out
+
+
 def search_volume(keywords: list[str]) -> dict:
     """keyword -> {'volume': int/mes, 'cpc': float, 'competition': 0-100}."""
     if os.environ.get("DATAFORSEO_MOCK") == "1":
