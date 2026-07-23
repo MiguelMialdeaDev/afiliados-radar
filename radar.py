@@ -157,6 +157,8 @@ CONFIRMED = {
     "estacion de energia portatil": "SERP de especialistas (Autosolar, Genergy, energia-portatil.com) + demanda fuerte sostenida en Trends. 2º confirmado del tema ENERGÍA.",
     "cochecito gemelar": "SERP toda de webs nicho bebé PERO Trends plano (demanda mínima): vale como artículo de APOYO del tema bebé, no como pilar.",
     "descalcificador de agua": "Viable moderado: webs pequeñas y foros rankean (fisicaliente, AquaDux, groupsumi) con solo 2 medios; ojo, varios competidores son fabricantes y hay mucho Shopping. Demanda moderada estable (~20-40, 'descalcificador casa' +250%).",
+    "silla de coche bebe": "CONFIRMADO FUERTE: 6 webs nicho bebé en pág.1 (Carlitos Baby, El Último Koala, Disbaby, ALI Bebé…) + demanda sostenida 60-100 con 'mejor silla coche bebé' +50%. 3er nicho del tema BEBÉ.",
+    "canape abatible": "Viable moderado: 6 webs nicho descanso rankean pero 3 medios presentes (La Vanguardia, ELLE, La Razón) y varias pequeñas son tiendas. Demanda estable ~40-60.",
 }
 
 
