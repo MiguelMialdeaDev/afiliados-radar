@@ -1,11 +1,73 @@
 nicho,categoria,ticket_estimado
 robot aspirador,hogar,250
 freidora de aire,cocina,90
-mochila portatil,moda,45
-colchon viscoelastico,muebles,300
 cafetera espresso,cocina,150
-bicicleta electrica,deportes,900
-cepillo electrico para perros,mascotas,25
+cafetera superautomatica,cocina,350
+robot de cocina,cocina,400
+batidora amasadora,cocina,120
+purificador de aire,hogar,180
+humidificador,hogar,45
+deshumidificador,hogar,150
+aspirador escoba,hogar,200
+aspirador de mano,hogar,60
+plancha vertical,hogar,90
+colchon viscoelastico,muebles,300
+almohada cervical,muebles,40
+canape abatible,muebles,220
+sofa cama,muebles,450
+silla gaming,muebles,180
+silla oficina ergonomica,muebles,250
+escritorio elevable,muebles,300
 monitor gaming,informatica,250
-crema facial retinol,belleza,30
+monitor 4k,informatica,350
+portatil gaming,informatica,1200
+disco duro ssd,informatica,80
+disco duro externo,informatica,90
+router wifi,informatica,110
+teclado mecanico,informatica,100
+raton gaming,informatica,60
+altavoz bluetooth,electronica,70
+barra de sonido,electronica,200
+auriculares inalambricos,electronica,150
+smartwatch,electronica,200
+tablet,electronica,300
+proyector,electronica,400
+tv 55 pulgadas,electronica,550
+ereader,electronica,130
+webcam,informatica,70
+bicicleta electrica,deportes,900
+patinete electrico,deportes,450
+cinta de correr,deportes,600
+bicicleta estatica,deportes,250
+eliptica,deportes,350
+mancuernas ajustables,deportes,180
+banco de musculacion,deportes,200
+tienda de campaña,deportes,150
+mochila de senderismo,deportes,90
+saco de dormir,deportes,70
+cepillo de dientes electrico,belleza,60
+secador de pelo,belleza,90
+plancha de pelo,belleza,80
+depiladora luz pulsada,belleza,250
+bascula inteligente,salud,40
+tensiometro,salud,50
+silla de coche bebe,bebe,250
+cochecito de bebe,bebe,400
+vigilabebes,bebe,120
+trona de bebe,bebe,130
+extractor de leche,bebe,150
 taladro percutor,herramientas,80
+atornillador electrico,herramientas,60
+hidrolimpiadora,herramientas,150
+cortacesped,jardin,200
+robot cortacesped,jardin,700
+desbrozadora,jardin,140
+generador electrico,herramientas,300
+compresor de aire,herramientas,180
+fuente de agua para gatos,mascotas,35
+arenero autolimpiable,mascotas,250
+comedero automatico gatos,mascotas,60
+rascador para gatos,mascotas,50
+transportin para perro,mascotas,70
+maleta de cabina,equipaje,80
+mochila para portatil,equipaje,45

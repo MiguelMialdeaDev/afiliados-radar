@@ -16,6 +16,7 @@ import html
 import math
 import os
 import re
+import urllib.parse
 from pathlib import Path
 
 import dataforseo
@@ -67,28 +68,31 @@ def _verd(total: int) -> str:
 
 
 def score(euro: float, intent_pts: int) -> tuple[int, str]:
-    """Nivel 1 (sin demanda): €/venta (60) + intención (40)."""
-    total = round(min(euro / 5.0, 1.0) * 60 + intent_pts)
+    """Nivel 1 (gratis, sin demanda): €/venta (60, satura a 15€) + intención (40).
+    Satura a 15€ para repartir bien en un catálogo con tickets muy dispares."""
+    total = round(min(euro / 15.0, 1.0) * 60 + intent_pts)
     return total, _verd(total)
 
 
 INTENT_N2 = {"Alta": 15, "Media": 10, "Baja": 4}
 
 
-def score2(euro: float, intent_label: str, volume: int) -> tuple[int, str]:
-    """Nivel 2: €/venta (45, satura 15€) + demanda (40, log, satura ~100k) +
-    intención (15).
+def score2(euro: float, intent_label: str, volume: int, rank_pts=None) -> tuple[int, str]:
+    """Nivel 2: €/venta + demanda + intención (+ rankeabilidad si hay SERP).
 
-    NO usa el KD de DataForSEO Labs: en español su cobertura es pobre (devuelve 0
-    = "sin datos" en la mitad de términos, y valores implausiblemente bajos en el
-    resto). Un dato de dificultad engañoso es peor que ninguno, así que el KD se
-    muestra SOLO como pista informativa, nunca dirige el score. La dificultad SEO
-    real se valida a mano (mirar la página 1 de Google) o con Ahrefs/Semrush.
+    La rankeabilidad viene de la PÁGINA 1 REAL de Google (classify_serp), que SÍ
+    es fiable en español — a diferencia del KD de DataForSEO Labs, que se descartó.
+    Sin SERP, se reparte su peso entre €/venta y demanda.
     """
-    euro_pts = min(euro / 15.0, 1.0) * 45
-    demand_pts = min(math.log10(volume + 1) / 5.0, 1.0) * 40
     intent_pts = INTENT_N2.get(intent_label, 10)
-    total = round(max(0.0, min(100.0, euro_pts + demand_pts + intent_pts)))
+    if rank_pts is not None:
+        euro_pts = min(euro / 15.0, 1.0) * 35
+        demand_pts = min(math.log10(volume + 1) / 5.0, 1.0) * 30
+        total = round(max(0.0, min(100.0, euro_pts + demand_pts + rank_pts + intent_pts)))
+    else:
+        euro_pts = min(euro / 15.0, 1.0) * 45
+        demand_pts = min(math.log10(volume + 1) / 5.0, 1.0) * 40
+        total = round(max(0.0, min(100.0, euro_pts + demand_pts + intent_pts)))
     return total, _verd(total)
 
 
@@ -100,6 +104,51 @@ CONVERSION = 0.03
 
 def potencial_mes(volume: int, euro: float) -> float:
     return volume * CAPTURE * CONVERSION * euro
+
+
+# Grandes dominios que una web nueva de afiliación NO puede desbancar (retailers,
+# marketplaces y medios con autoridad). EDITABLE: añade los que veas repetirse.
+# Si la página 1 está llena de estos, el nicho es difícil; si asoman webs nicho
+# pequeñas, hay hueco. Se comprueba por "contiene" (amazon. cubre amazon.es/.com).
+BIG_DOMAINS = [
+    "amazon.", "elcorteingles.", "pccomponentes.", "mediamarkt.", "carrefour.",
+    "worten.", "fnac.", "leroymerlin.", "decathlon.", "aliexpress.", "ebay.",
+    "ikea.", "conforama.", "miravia.", "idealo.", "kelkoo.", "milanuncios.",
+    "xataka.", "elpais.", "elmundo.", "20minutos.", "lavanguardia.", "abc.",
+    "elindependiente.", "elespanol.", "larazon.", "businessinsider.", "ocu.org",
+    "computerhoy.", "hola.", "marca.", "as.com", "elconfidencial.", "wikipedia.",
+    "youtube.", "reddit.", "google.",
+]
+
+
+def _is_big(domain: str) -> bool:
+    d = (domain or "").lower()
+    return any(b in d for b in BIG_DOMAINS)
+
+
+def classify_serp(domains: list[str], ai_overview: bool) -> tuple[str, int, int]:
+    """De la página 1 real -> (etiqueta, nº grandes, puntos de rankeabilidad 0-25).
+
+    Cuantas menos webs pequeñas (nichables) haya en el top 10, más difícil entrar.
+    Un AI Overview resta (Google responde sin clic → menos tráfico aunque rankees).
+    """
+    if not domains:
+        return "s/d", 0, 12  # sin dato -> neutro, no penaliza ni premia
+    big = sum(1 for d in domains if _is_big(d))
+    small = len(domains) - big
+    frac_small = small / len(domains)
+    pts = round(frac_small * 25)
+    if ai_overview:
+        pts = max(0, pts - 6)
+    if small >= 4 and not ai_overview:
+        lab = "Accesible"
+    elif small >= 2:
+        lab = "Media"
+    else:
+        lab = "Difícil"
+    if ai_overview:
+        lab += " · AIO"
+    return lab, big, pts
 
 
 def _sparkline(monthly: list[int], color: str) -> str:
@@ -125,14 +174,17 @@ def _rows():
         for r in csv.DictReader(fh):
             raw.append((r["nicho"].strip(), r["categoria"].strip(), float(r["ticket_estimado"])))
 
-    # Nivel 2: demanda + dificultad SEO en dos lotes (mock o live) si hay config.
-    mode = dataforseo.available()
-    demand, kds = {}, {}
+    # Nivel 2 (demanda + SERP de DataForSEO) SOLO si se pide explícitamente con
+    # DATAFORSEO_ENABLE=1 y hay credenciales/saldo. Por defecto = Nivel 1 GRATIS,
+    # sin llamadas a la API (así la web no depende de saldo ni falla con 402).
+    mode = dataforseo.available() if os.environ.get("DATAFORSEO_ENABLE") == "1" else ""
+    demand, serps = {}, {}
     if mode:
         try:
-            kws = [n for n, _, _ in raw]
-            demand = dataforseo.search_volume(kws)
-            kds = dataforseo.keyword_difficulty(kws)
+            demand = dataforseo.search_volume([n for n, _, _ in raw])
+            for nicho, _, _ in raw:
+                # Consultamos la SERP del término con intención comercial ("mejor X").
+                serps[nicho] = dataforseo.serp_top(f"mejor {nicho}")
         except Exception as e:
             print(f"aviso: Nivel 2 no disponible ({type(e).__name__}: {str(e)[:80]}) -> Nivel 1")
             mode = ""
@@ -143,17 +195,21 @@ def _rows():
         ilabel, ipts = intent_label(nicho)
         d = demand.get(nicho)
         if d:
-            kd = kds.get(nicho)
-            sc, verd = score2(euro, ilabel, d["volume"])
+            s = serps.get(nicho) or {"domains": [], "ai_overview": False}
+            rank_lab, big, rank_pts = classify_serp(s["domains"], s["ai_overview"])
+            sc, verd = score2(euro, ilabel, d["volume"], rank_pts)
             vol, cpc = d["volume"], d["cpc"]
             monthly, peak = d.get("monthly") or [], d.get("peak") or ""
             pot = potencial_mes(vol, euro)
+            aio = s["ai_overview"]
         else:
             sc, verd = score(euro, ipts)
-            vol, cpc, monthly, peak, kd, pot = None, None, [], "", None, None
+            vol, cpc, monthly, peak, pot = None, None, [], "", None
+            rank_lab, big, aio = "", 0, False
         out.append(dict(nicho=nicho, cat=cat, com=com, ticket=ticket, euro=euro,
                         intent=ilabel, score=sc, verd=verd, vol=vol, cpc=cpc,
-                        monthly=monthly, peak=peak, kd=kd, pot=pot))
+                        monthly=monthly, peak=peak, pot=pot,
+                        rank=rank_lab, big=big, aio=aio))
     out.sort(key=lambda x: x["score"], reverse=True)
     return out, mode
 
@@ -219,6 +275,10 @@ td.euro{font-weight:750;font-size:15px}
 .trend svg{flex:0 0 auto;opacity:.85}
 .peak{font:600 10px/1 ui-monospace,monospace;color:var(--dim);text-transform:uppercase;letter-spacing:.03em;white-space:nowrap}
 .kd{font-weight:650;font-size:13px}
+.rankcell{text-align:left}
+.big{display:block;font:600 10px/1.2 ui-monospace,monospace;color:var(--dim);margin-top:2px}
+.aio{font:700 9px/1 ui-monospace,monospace;color:var(--bad);border:1px solid var(--bad);
+  border-radius:4px;padding:1px 4px;margin-left:4px;vertical-align:middle}
 .filters{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px}
 .flabel{font:600 11px/1 ui-monospace,monospace;text-transform:uppercase;letter-spacing:.08em;color:var(--dim)}
 .fbtn{font:600 12px/1 -apple-system,system-ui,sans-serif;padding:7px 13px;border-radius:99px;
@@ -233,6 +293,10 @@ th:hover{color:var(--accent)}
 .chip{display:inline-block;font:650 11px/1 ui-monospace,monospace;letter-spacing:.02em;
   padding:5px 9px;border-radius:99px}
 .pend{color:var(--dim);opacity:.5}
+.chkcell{text-align:left;white-space:nowrap}
+.chk{display:inline-block;font:600 11px/1 -apple-system,system-ui,sans-serif;text-decoration:none;
+  color:var(--accent);border:1px solid var(--line);border-radius:7px;padding:5px 8px;margin:1px 3px 1px 0}
+.chk:hover{border-color:var(--accent);background:var(--accent-soft)}
 .foot{color:var(--dim);font-size:12px;margin-top:16px;line-height:1.6}
 .foot code{font-family:ui-monospace,monospace;background:var(--accent-soft);padding:1px 5px;border-radius:4px}
 """
@@ -248,6 +312,17 @@ def _miles(n: int) -> str:
     return f"{n:,}".replace(",", ".")
 
 
+def _check_links(nicho: str) -> str:
+    """Botones para comprobar A MANO (gratis) la página 1 de Google y la
+    tendencia — la vía sin coste para validar rankeabilidad y demanda."""
+    q = urllib.parse.quote_plus(f"mejor {nicho}")
+    serp = f"https://www.google.es/search?q={q}"
+    tq = urllib.parse.quote_plus(nicho)
+    trends = f"https://trends.google.es/trends/explore?geo=ES&q={tq}"
+    return (f"<a class='chk' href='{serp}' target='_blank' rel='noopener'>Página&nbsp;1</a>"
+            f"<a class='chk' href='{trends}' target='_blank' rel='noopener'>Tendencia</a>")
+
+
 def _inner() -> str:
     rows, mode = _rows()
     n2 = bool(mode)
@@ -256,49 +331,60 @@ def _inner() -> str:
     best = max(rows, key=lambda x: x["euro"])
     fuertes = sum(1 for r in rows if r["verd"] == "Fuerte")
 
-    def _kd_cell(kd):
-        # 0 y None = DataForSEO no tiene dato fiable en ES → "s/d" (sin dato).
-        if not kd:
+    def _rank_cell(r):
+        lab = r.get("rank") or ""
+        if not lab or lab == "s/d":
             return "<span class='pend'>s/d</span>", -1
-        lab = "fácil" if kd < 30 else "media" if kd < 60 else "difícil"
-        col = "var(--good)" if kd < 30 else "var(--warn)" if kd < 60 else "var(--bad)"
-        return f"<span class='kd' style='color:{col}'>{kd} · {lab}?</span>", kd
+        base = lab.split(" · ")[0]
+        col = ("var(--good)" if base == "Accesible" else
+               "var(--warn)" if base == "Media" else "var(--bad)")
+        sort = {"Accesible": 2, "Media": 1, "Difícil": 0}.get(base, -1)
+        aio = " <span class='aio'>AIO</span>" if r.get("aio") else ""
+        big = r.get("big", 0)
+        title = f"{big}/10 grandes en la página 1 de Google"
+        return (f"<span class='kd' style='color:{col}' title='{title}'>{base}</span>{aio}"
+                f"<span class='big'>{big}/10 grandes</span>", sort)
 
     trs = []
     for r in rows:
         fg, bg = _color(r["verd"])
-        dem = (f"{_miles(r['vol'])}/mes" if r["vol"] is not None
-               else "<span class='pend'>—</span>")
-        if n2 and r["monthly"]:
-            spark = _sparkline(r["monthly"], "var(--accent)")
-            peak = (f"<span class='peak'>pico {html.escape(r['peak'])}</span>"
-                    if r["peak"] else "")
-            trend = f"<div class='trend'>{spark}{peak}</div>"
-            cpc = f"{r['cpc']:.2f}€" if r["cpc"] is not None else "—"
-        else:
-            trend, cpc = "<span class='pend'>—</span>", "<span class='pend'>—</span>"
-        kd_html, kd_sort = _kd_cell(r.get("kd"))
-        pot_html = (f"<b>{_miles(round(r['pot']))}€</b>" if r.get("pot") is not None
-                    else "<span class='pend'>—</span>")
-        pot_sort = r["pot"] if r.get("pot") is not None else -1
-        # data-* para ordenar en JS; data-verd para filtrar.
-        trs.append(
-            f"<tr data-verd='{r['verd']}' data-nicho='{html.escape(r['nicho'])}'>"
-            f"<td class='l nicho'>{html.escape(r['nicho'])}</td>"
-            f"<td class='l cat'>{html.escape(r['cat'])}</td>"
-            f"<td data-s='{r['com']}'>{r['com']:.1f}%</td>"
-            f"<td data-s='{r['ticket']}'>{r['ticket']:.0f}€</td>"
-            f"<td class='euro' data-s='{r['euro']}'>{r['euro']:.2f}€</td>"
-            f"<td>{r['intent']}</td>"
-            f"<td data-s='{r['vol'] or 0}'>{dem}</td>"
-            f"<td class='trendcell'>{trend}</td>"
-            f"<td data-s='{kd_sort}'>{kd_html}</td>"
-            f"<td class='euro' data-s='{pot_sort}'>{pot_html}</td>"
+        cells = [
+            f"<td class='l nicho'>{html.escape(r['nicho'])}</td>",
+            f"<td class='l cat'>{html.escape(r['cat'])}</td>",
+            f"<td data-s='{r['com']}'>{r['com']:.1f}%</td>",
+            f"<td data-s='{r['ticket']}'>{r['ticket']:.0f}€</td>",
+            f"<td class='euro' data-s='{r['euro']}'>{r['euro']:.2f}€</td>",
+            f"<td>{r['intent']}</td>",
+        ]
+        if n2:  # columnas de pago (demanda + tendencia + rankeabilidad + €/mes)
+            dem = (f"{_miles(r['vol'])}/mes" if r["vol"] is not None
+                   else "<span class='pend'>—</span>")
+            if r["monthly"]:
+                peak = (f"<span class='peak'>pico {html.escape(r['peak'])}</span>"
+                        if r["peak"] else "")
+                trend = f"<div class='trend'>{_sparkline(r['monthly'], 'var(--accent)')}{peak}</div>"
+            else:
+                trend = "<span class='pend'>—</span>"
+            rank_html, rank_sort = _rank_cell(r)
+            pot_html = (f"<b>{_miles(round(r['pot']))}€</b>" if r.get("pot") is not None
+                        else "<span class='pend'>—</span>")
+            pot_sort = r["pot"] if r.get("pot") is not None else -1
+            cells += [
+                f"<td data-s='{r['vol'] or 0}'>{dem}</td>",
+                f"<td class='trendcell'>{trend}</td>",
+                f"<td class='rankcell' data-s='{rank_sort}'>{rank_html}</td>",
+                f"<td class='euro' data-s='{pot_sort}'>{pot_html}</td>",
+            ]
+        cells += [
             f"<td data-s='{r['score']}'><div class='scorecell'>"
             f"<span class='bar'><i style='width:{r['score']}%;background:{fg}'></i></span>"
-            f"<span class='scoren'>{r['score']}</span></div></td>"
-            f"<td><span class='chip' style='color:{fg};background:{bg}'>{r['verd']}</span></td>"
-            f"</tr>"
+            f"<span class='scoren'>{r['score']}</span></div></td>",
+            f"<td><span class='chip' style='color:{fg};background:{bg}'>{r['verd']}</span></td>",
+            f"<td class='chkcell'>{_check_links(r['nicho'])}</td>",
+        ]
+        trs.append(
+            f"<tr data-verd='{r['verd']}' data-nicho='{html.escape(r['nicho'])}'>"
+            + "".join(cells) + "</tr>"
         )
 
     if n2:
@@ -316,31 +402,34 @@ def _inner() -> str:
                     "de DataForSEO en <code>.env</code> se rellenan con volumen real de España.</div>")
         else:
             note = ("<span>✓</span><div><b>Nivel 2 · datos reales de España.</b> Demanda, "
-                    "tendencia&nbsp;12m, mes pico, CPC y <b>€ potenciales/mes</b> (techo si capturas "
-                    "~4% de las búsquedas y ~3% compra) de DataForSEO. Toca una cabecera para "
-                    "reordenar; filtra arriba.<br><b>KD (dificultad SEO): tómalo con pinzas.</b> La "
-                    "cobertura de DataForSEO en español es pobre (<i>s/d</i> = sin dato; los valores "
-                    "salen implausiblemente bajos), por eso NO cuenta en el score. Para saber si "
-                    "puedes rankear de verdad, mira a mano la página&nbsp;1 de Google del término.</div>")
-        lede = ("Qué nichos compensan de verdad: <b>paga</b> × <b>se busca</b>, con su estación y su "
-                "techo de ingresos. Ordena y filtra a tu gusto.")
-        foot = ("Score = €/venta (45, satura 15€) + demanda (40, log, satura ~100k) + intención (15). "
-                "€/mes = demanda × 4% captura × 3% conversión × €/venta (editable en <code>radar.py</code>). "
-                "KD = pista informativa, NO entra en el score (poco fiable en ES).<br>"
-                "Edita <code>nichos.csv</code> y la tabla <code>COMISIONES</code>, y vuelve a ejecutar.")
+                    "tendencia&nbsp;12m, mes pico, <b>€ potenciales/mes</b> y <b>Rankeable</b>. "
+                    "Esta última mira la <b>página 1 real de Google</b> (“mejor {nicho}”) y cuenta "
+                    "cuántos son grandes (Amazon, El&nbsp;Corte&nbsp;Inglés, medios…): pocas webs "
+                    "pequeñas = difícil entrar; varias = hay hueco. <b>AIO</b> = Google pone AI "
+                    "Overview (roba clics). Esta sí es fiable en español (mira quién rankea de "
+                    "verdad, no un número). Toca una cabecera para reordenar; filtra arriba.</div>")
+        lede = ("Qué nichos compensan de verdad: <b>paga</b> × <b>se busca</b> × <b>puedes entrar</b>. "
+                "Ordena y filtra a tu gusto.")
+        foot = ("Score = €/venta (35, satura 15€) + demanda (30, log) + rankeabilidad de la SERP (25) "
+                "+ intención (10). €/mes = demanda × 4% captura × 3% conversión × €/venta. Grandes "
+                "dominios en <code>BIG_DOMAINS</code> (editable).<br>"
+                "Edita <code>nichos.csv</code> y <code>COMISIONES</code>, y vuelve a ejecutar.")
     else:
-        eyebrow = "Nivel 1 · cribado gratis"
+        eyebrow = "Cribado gratis · 100% sin coste"
         kpi4 = (f"<div class='kpi'><div class='k'>En verde</div>"
                 f"<div class='v'>{fuertes} <small>de {n}</small></div></div>")
-        note = ("<span>ⓘ</span><div><b>Lo que aún no mide:</b> demanda (búsquedas/mes) y "
-                "competencia — esa es la capa de pago barata (Nivel&nbsp;2, DataForSEO "
-                "~0,05&nbsp;$/nicho). Este Nivel&nbsp;1 descarta lo que no paga <i>antes</i> "
-                "de validar demanda. Comisiones = estimadas y editables.</div>")
-        lede = ("Qué nichos compensan por <b>dinero real por venta</b> e intención de compra, "
-                "antes de gastar un céntimo en validar demanda. Ordenado por score.")
-        foot = ("Score = €/venta (hasta 60, tope 5€) + intención (hasta 40). La columna "
-                "<b>Demanda</b> se rellena en el Nivel&nbsp;2.<br>"
-                "Edita <code>nichos.csv</code> y la tabla <code>COMISIONES</code>, y vuelve a ejecutar.")
+        note = ("<span>✓</span><div><b>Todo gratis, sin depender de nadie.</b> El radar puntúa "
+                "por lo fiable: <b>€ por venta</b> (comisión Amazon × ticket) e <b>intención de "
+                "compra</b>. Eso te dice qué nichos <b>pagan</b>. Para lo que necesita ver Google "
+                "en directo —quién rankea y la tendencia—, cada fila trae dos botones: "
+                "<b>“Página&nbsp;1”</b> (abre la búsqueda en google.es) y <b>“Tendencia”</b> "
+                "(Google&nbsp;Trends). Filtra por veredicto y ordena tocando una cabecera.</div>")
+        lede = ("Qué nichos <b>pagan de verdad</b> (comisión × ticket × intención), y un clic para "
+                "comprobar tú mismo en Google quién rankea y la tendencia. Ordena y filtra.")
+        foot = ("Score = €/venta (60, satura a 15€) + intención de compra (40). Comisiones "
+                "Amazon estimadas y editables en <code>COMISIONES</code>.<br>"
+                "Flujo: el radar filtra por dinero → tú comprueba los finalistas con los botones "
+                "<b>Página&nbsp;1</b> / <b>Tendencia</b> (gratis). Edita <code>nichos.csv</code> y vuelve a ejecutar.")
 
     return f"""<title>Radar de nichos de afiliación</title>
 <style>{CSS}</style>
@@ -358,20 +447,20 @@ def _inner() -> str:
 
   <div class="note">{note}</div>
 
-  {'' if not n2 else '''<div class="filters">
+  <div class="filters">
     <span class="flabel">Filtrar:</span>
     <button class="fbtn on" data-f="all">Todos</button>
     <button class="fbtn" data-f="Fuerte">Fuerte</button>
     <button class="fbtn" data-f="Revisar">Revisar</button>
     <button class="fbtn" data-f="Flojo">Flojo</button>
     <input class="fsearch" type="search" placeholder="Buscar nicho…" aria-label="Buscar nicho">
-  </div>'''}
+  </div>
 
   <div class="tablewrap"><table id="radar">
     <thead><tr>
       <th class="l">Nicho</th><th class="l">Categoría</th><th>Comisión</th><th>Ticket</th>
-      <th>€/venta</th><th>Intención</th><th>Demanda</th><th>Tendencia&nbsp;12m</th>
-      <th>KD SEO?</th><th>€/mes</th><th>Score</th><th>Veredicto</th>
+      <th>€/venta</th><th>Intención</th>{'<th>Demanda</th><th>Tendencia&nbsp;12m</th><th>Rankeable?</th><th>€/mes</th>' if n2 else ''}
+      <th>Score</th><th>Veredicto</th><th>Comprobar</th>
     </tr></thead>
     <tbody>{''.join(trs)}</tbody>
   </table></div>

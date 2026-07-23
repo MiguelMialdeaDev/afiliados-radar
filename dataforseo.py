@@ -86,6 +86,46 @@ def keyword_difficulty(keywords: list[str]) -> dict:
     return out
 
 
+def serp_top(keyword: str, depth: int = 10) -> dict:
+    """Página 1 real de Google en España para una keyword. Devuelve:
+    {'domains': [top N orgánicos], 'ai_overview': bool}. ~0,002$/consulta.
+
+    Es la señal FIABLE de dificultad (a diferencia del KD): quién rankea de verdad.
+    """
+    if os.environ.get("DATAFORSEO_MOCK") == "1":
+        h = sum(ord(c) for c in keyword)
+        pool = ["amazon.es", "elcorteingles.es", "xataka.com", "miblog.es",
+                "nichito.es", "pccomponentes.com", "reviews-x.es", "elpais.com"]
+        return {"domains": [pool[(h + i) % len(pool)] for i in range(depth)],
+                "ai_overview": h % 3 == 0}
+    auth = _auth()
+    if not auth:
+        raise RuntimeError("Faltan credenciales DataForSEO")
+    body = json.dumps([{
+        "keyword": keyword,
+        "location_code": LOCATION_ES,
+        "language_code": LANGUAGE_ES,
+        "depth": depth,
+    }]).encode()
+    req = urllib.request.Request(
+        f"{BASE}/serp/google/organic/live/advanced",
+        data=body,
+        headers={"Authorization": auth, "Content-Type": "application/json"},
+    )
+    with urllib.request.urlopen(req, timeout=60) as r:
+        data = json.load(r)
+    domains, ai = [], False
+    for task in data.get("tasks", []):
+        for res in (task.get("result") or []):
+            for it in (res.get("items") or []):
+                t = it.get("type")
+                if t == "ai_overview":
+                    ai = True
+                elif t == "organic" and it.get("domain") and len(domains) < depth:
+                    domains.append(it["domain"])
+    return {"domains": domains, "ai_overview": ai}
+
+
 def search_volume(keywords: list[str]) -> dict:
     """keyword -> {'volume': int/mes, 'cpc': float, 'competition': 0-100}."""
     if os.environ.get("DATAFORSEO_MOCK") == "1":
