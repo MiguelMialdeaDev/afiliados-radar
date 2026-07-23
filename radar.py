@@ -457,13 +457,16 @@ def _worklist(rows) -> str:
 
 
 def _inner() -> str:
-    rows, mode = _rows()
+    all_rows, mode = _rows()
     n2 = bool(mode)
+    # Los CONFIRMADOS viven SOLO en la lista de trabajo de arriba; la tabla es
+    # la cola de CANDIDATOS pendientes de revisar. Los no viables se borran del CSV.
+    worklist = _worklist(all_rows)
+    rows = [r for r in all_rows if r["nicho"] not in CONFIRMED]
     n = len(rows)
     top = rows[0]
     best = max(rows, key=lambda x: x["euro"])
     fuertes = sum(1 for r in rows if r["verd"] == "Fuerte")
-    worklist = _worklist(rows)
 
     def _rank_cell(r):
         lab = r.get("rank") or ""
@@ -569,8 +572,9 @@ def _inner() -> str:
                 "grandes tiendas (MediaMarkt, PcComponentes) y medios. ✓ = comprobado en google.es. "
                 "<b>Toca un nicho</b> para su ficha + el texto para copiar y buscar tú mismo. "
                 "Es una estimación: confírmala siempre mirando la página 1.</div>")
-        lede = ("Ordenados por <b>dónde hay hueco</b> para una web pequeña × lo que <b>pagan</b>. "
-                "Toca un nicho para su ficha y copiar la búsqueda de Google.")
+        lede = ("Arriba, los <b>viables confirmados</b> (ya revisados en Google — vamos a hacerlos). "
+                "Debajo, la <b>cola de candidatos por revisar</b>, ordenada por dónde hay hueco × lo que pagan. "
+                "Revisas uno → si es viable sube arriba, si no se elimina.")
         foot = ("Orden = Hueco? (Alta→Baja) y, a igualdad, Score = €/venta (60, satura 15€) + "
                 "intención (40). “Hueco?” es una heurística por categoría/nicho (mapas "
                 "<code>GAP_CAT</code>/<code>GAP_NICHE</code>, editables), NO un dato: confírmala en Google.<br>"
@@ -587,7 +591,7 @@ def _inner() -> str:
   {worklist}
 
   <div class="kpis">
-    <div class="kpi"><div class="k">Nichos</div><div class="v">{n}</div></div>
+    <div class="kpi"><div class="k">Por revisar</div><div class="v">{n}</div></div>
     <div class="kpi"><div class="k">Top</div><div class="v" style="font-size:15px;line-height:1.25">{html.escape(top['nicho'])}<br><small>score {top['score']}</small></div></div>
     <div class="kpi"><div class="k">Mejor €/venta</div><div class="v">{best['euro']:.2f}€ <small>{html.escape(best['nicho'])}</small></div></div>
     {kpi4}
