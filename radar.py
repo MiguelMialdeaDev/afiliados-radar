@@ -127,13 +127,22 @@ GAP_NICHE = {
     "smartwatch": "Baja", "tablet": "Baja", "altavoz bluetooth": "Baja",
 }
 GAP_RANK = {"Alta": 3, "Media": 2, "Baja": 1}
-# Nichos ya COMPROBADOS a mano en google.es (se muestran con ✓).
-VERIFIED = {"robot cortacesped": "Alta"}
+
+# LISTA DE TRABAJO: nichos COMPROBADOS a mano en google.es y CONFIRMADOS viables
+# (🟢, vamos a hacerlos). Se muestran con ✓, con Hueco Alta, y en una sección
+# destacada arriba ordenada por € por venta (los que más pagan primero). EDITABLE:
+# añade aquí cada nicho que confirmes en Google con una nota de por qué se queda.
+CONFIRMED = {
+    "robot cortacesped": "Webs de nicho rankean (robotcesped.com, tiendarobotcortacesped). Sin AI Overview.",
+    "cochecito de bebe": "Página 1 casi entera de webs de nicho de bebé (Alma Bebé, Bebépolis, El Último Koala…). Filón con muchos sub-nichos.",
+    "generador electrico": "Especialistas técnicos rankean (Autosolar, Enverd, lineonline). Sin AI Overview. Tendencia estable-alta.",
+    "escritorio elevable": "Webs de nicho rankean (tuescritorioelevable.es, aiho, Tablakala). Sin AI Overview. Tendencia estable.",
+}
 
 
 def gap_prob(nicho: str, cat: str) -> str:
-    if nicho in VERIFIED:
-        return VERIFIED[nicho]
+    if nicho in CONFIRMED:
+        return "Alta"
     return GAP_NICHE.get(nicho, GAP_CAT.get(cat, "Media"))
 
 
@@ -242,7 +251,7 @@ def _rows():
                         intent=ilabel, score=sc, verd=verd, vol=vol, cpc=cpc,
                         monthly=monthly, peak=peak, pot=pot,
                         rank=rank_lab, big=big, aio=aio,
-                        gap=gap, verified=(nicho in VERIFIED)))
+                        gap=gap, verified=(nicho in CONFIRMED)))
     # Orden por PROBABILIDAD DE HUECO primero (Alta→Baja), luego por dinero (score).
     out.sort(key=lambda x: (GAP_RANK.get(x["gap"], 2), x["score"]), reverse=True)
     return out, mode
@@ -327,6 +336,21 @@ th:hover{color:var(--accent)}
 .chip{display:inline-block;font:650 11px/1 ui-monospace,monospace;letter-spacing:.02em;
   padding:5px 9px;border-radius:99px}
 .pend{color:var(--dim);opacity:.5}
+.worklist{background:color-mix(in srgb,var(--good) 8%,var(--panel));border:1px solid var(--good);
+  border-radius:16px;padding:18px 18px 20px;margin-bottom:22px}
+.wl-head{font-weight:800;font-size:15px;margin-bottom:14px;color:var(--good)}
+.wl-head span{font-weight:500;font-size:12px;color:var(--dim)}
+.wl-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+.wl-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:13px 14px}
+.wl-top{display:flex;align-items:center;gap:9px;margin-bottom:5px}
+.wl-rank{background:var(--good);color:#fff;font:800 12px/1 ui-monospace,monospace;
+  width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.wl-name{font-weight:700;font-size:15px;text-transform:capitalize}
+.wl-meta{font-size:12px;color:var(--dim);margin-bottom:7px}
+.wl-meta b{color:var(--good)}
+.wl-why{font-size:12.5px;line-height:1.45;color:var(--ink);margin-bottom:10px}
+.wl-link{font:600 12px/1 -apple-system,system-ui,sans-serif;text-decoration:none;color:var(--accent)}
+.wl-link:hover{text-decoration:underline}
 tr.nrow{cursor:pointer}
 tr.nrow:hover td{background:var(--accent-soft)}
 tr.nrow td.nicho::after{content:"›";color:var(--dim);margin-left:6px;font-weight:700}
@@ -384,6 +408,37 @@ def _check_links(nicho: str) -> str:
             f"<a class='chk' href='{trends}' target='_blank' rel='noopener'>Tendencia</a>")
 
 
+def _worklist(rows) -> str:
+    """Sección destacada arriba con los nichos CONFIRMADOS viables, ordenados
+    por € por venta (los que más pagan). Es la 'lista de trabajo': lo que vamos
+    a hacer, ya verificado a mano en google.es."""
+    conf = [r for r in rows if r["nicho"] in CONFIRMED]
+    if not conf:
+        return ""
+    conf.sort(key=lambda x: x["euro"], reverse=True)
+    cards = []
+    for i, r in enumerate(conf, 1):
+        q = urllib.parse.quote_plus(f"mejor {r['nicho']}")
+        cards.append(
+            f"<div class='wl-card'>"
+            f"<div class='wl-top'><span class='wl-rank'>{i}</span>"
+            f"<span class='wl-name'>{html.escape(r['nicho'])}</span></div>"
+            f"<div class='wl-meta'>{r['euro']:.2f}€/venta · {html.escape(r['cat'])} · "
+            f"<b>Hueco Alta ✓</b></div>"
+            f"<div class='wl-why'>{html.escape(CONFIRMED[r['nicho']])}</div>"
+            f"<a class='wl-link' href='https://www.google.es/search?q={q}' "
+            f"target='_blank' rel='noopener'>Ver página 1 ↗</a>"
+            f"</div>"
+        )
+    return (
+        "<div class='worklist'>"
+        f"<div class='wl-head'>⭐ Lista de trabajo · {len(conf)} nichos viables "
+        "<span>(confirmados en Google — vamos a hacerlos, mejores primero)</span></div>"
+        f"<div class='wl-grid'>{''.join(cards)}</div>"
+        "</div>"
+    )
+
+
 def _inner() -> str:
     rows, mode = _rows()
     n2 = bool(mode)
@@ -391,6 +446,7 @@ def _inner() -> str:
     top = rows[0]
     best = max(rows, key=lambda x: x["euro"])
     fuertes = sum(1 for r in rows if r["verd"] == "Fuerte")
+    worklist = _worklist(rows)
 
     def _rank_cell(r):
         lab = r.get("rank") or ""
@@ -510,6 +566,8 @@ def _inner() -> str:
   <div class="eyebrow">{eyebrow}</div>
   <h1>Radar de nichos de afiliación</h1>
   <p class="lede">{lede}</p>
+
+  {worklist}
 
   <div class="kpis">
     <div class="kpi"><div class="k">Nichos</div><div class="v">{n}</div></div>
