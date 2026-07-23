@@ -154,6 +154,8 @@ CONFIRMED = {
     "cochecito de bebe": "Página 1 casi entera de webs de nicho de bebé (Alma Bebé, Bebépolis, El Último Koala…). Filón con muchos sub-nichos.",
     "generador electrico": "Especialistas técnicos rankean (Autosolar, Enverd, lineonline). Sin AI Overview. Tendencia estable-alta.",
     "escritorio elevable": "Webs de nicho rankean (tuescritorioelevable.es, aiho, Tablakala). Sin AI Overview. Tendencia estable.",
+    "estacion de energia portatil": "SERP de especialistas (Autosolar, Genergy, energia-portatil.com) + demanda fuerte sostenida en Trends. 2º confirmado del tema ENERGÍA.",
+    "cochecito gemelar": "SERP toda de webs nicho bebé PERO Trends plano (demanda mínima): vale como artículo de APOYO del tema bebé, no como pilar.",
 }
 
 
