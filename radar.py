@@ -156,6 +156,7 @@ CONFIRMED = {
     "escritorio elevable": "Webs de nicho rankean (tuescritorioelevable.es, aiho, Tablakala). Sin AI Overview. Tendencia estable.",
     "estacion de energia portatil": "SERP de especialistas (Autosolar, Genergy, energia-portatil.com) + demanda fuerte sostenida en Trends. 2º confirmado del tema ENERGÍA.",
     "cochecito gemelar": "SERP toda de webs nicho bebé PERO Trends plano (demanda mínima): vale como artículo de APOYO del tema bebé, no como pilar.",
+    "descalcificador de agua": "Viable moderado: webs pequeñas y foros rankean (fisicaliente, AquaDux, groupsumi) con solo 2 medios; ojo, varios competidores son fabricantes y hay mucho Shopping. Demanda moderada estable (~20-40, 'descalcificador casa' +250%).",
 }
 
 
