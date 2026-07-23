@@ -75,25 +75,20 @@ def score(euro: float, intent_pts: int) -> tuple[int, str]:
 INTENT_N2 = {"Alta": 15, "Media": 10, "Baja": 4}
 
 
-def score2(euro: float, intent_label: str, volume: int, kd=None) -> tuple[int, str]:
-    """Nivel 2: €/venta + demanda + (rankeabilidad si hay KD) + intención.
+def score2(euro: float, intent_label: str, volume: int) -> tuple[int, str]:
+    """Nivel 2: €/venta (45, satura 15€) + demanda (40, log, satura ~100k) +
+    intención (15).
 
-    Topes altos para que un nicho excepcional (mucho ticket Y mucha demanda)
-    destaque: €/venta satura a 15€, demanda log satura a ~100.000 búsq/mes.
-    Cuando hay KD real (dificultad SEO 0-100, menor = más fácil), la
-    "rankeabilidad" (100−KD) entra en el score — es la pieza que dice si puedes
-    entrar. Sin KD, se reparte su peso entre €/venta y demanda.
+    NO usa el KD de DataForSEO Labs: en español su cobertura es pobre (devuelve 0
+    = "sin datos" en la mitad de términos, y valores implausiblemente bajos en el
+    resto). Un dato de dificultad engañoso es peor que ninguno, así que el KD se
+    muestra SOLO como pista informativa, nunca dirige el score. La dificultad SEO
+    real se valida a mano (mirar la página 1 de Google) o con Ahrefs/Semrush.
     """
+    euro_pts = min(euro / 15.0, 1.0) * 45
+    demand_pts = min(math.log10(volume + 1) / 5.0, 1.0) * 40
     intent_pts = INTENT_N2.get(intent_label, 10)
-    if kd is not None:
-        euro_pts = min(euro / 15.0, 1.0) * 35
-        demand_pts = min(math.log10(volume + 1) / 5.0, 1.0) * 30
-        rank_pts = (100 - kd) / 100.0 * 25
-        total = round(max(0.0, min(100.0, euro_pts + demand_pts + rank_pts + intent_pts)))
-    else:
-        euro_pts = min(euro / 15.0, 1.0) * 45
-        demand_pts = min(math.log10(volume + 1) / 5.0, 1.0) * 40
-        total = round(max(0.0, min(100.0, euro_pts + demand_pts + intent_pts)))
+    total = round(max(0.0, min(100.0, euro_pts + demand_pts + intent_pts)))
     return total, _verd(total)
 
 
@@ -149,7 +144,7 @@ def _rows():
         d = demand.get(nicho)
         if d:
             kd = kds.get(nicho)
-            sc, verd = score2(euro, ilabel, d["volume"], kd)
+            sc, verd = score2(euro, ilabel, d["volume"])
             vol, cpc = d["volume"], d["cpc"]
             monthly, peak = d.get("monthly") or [], d.get("peak") or ""
             pot = potencial_mes(vol, euro)
@@ -262,11 +257,12 @@ def _inner() -> str:
     fuertes = sum(1 for r in rows if r["verd"] == "Fuerte")
 
     def _kd_cell(kd):
-        if kd is None:
-            return "<span class='pend'>—</span>", -1
+        # 0 y None = DataForSEO no tiene dato fiable en ES → "s/d" (sin dato).
+        if not kd:
+            return "<span class='pend'>s/d</span>", -1
         lab = "fácil" if kd < 30 else "media" if kd < 60 else "difícil"
         col = "var(--good)" if kd < 30 else "var(--warn)" if kd < 60 else "var(--bad)"
-        return f"<span class='kd' style='color:{col}'>{kd} · {lab}</span>", kd
+        return f"<span class='kd' style='color:{col}'>{kd} · {lab}?</span>", kd
 
     trs = []
     for r in rows:
@@ -319,16 +315,18 @@ def _inner() -> str:
                     "funciona; estas cifras de demanda son ficticias. Con tus credenciales "
                     "de DataForSEO en <code>.env</code> se rellenan con volumen real de España.</div>")
         else:
-            note = ("<span>✓</span><div><b>Nivel 2 completo · datos reales de España.</b> "
-                    "Demanda, tendencia&nbsp;12m, mes pico, CPC y <b>dificultad SEO (KD)</b> de "
-                    "DataForSEO. <b>KD bajo = puedes rankear.</b> El <b>€/mes</b> es un techo "
-                    "optimista (si capturas ~4% de las búsquedas y ~3% compra). Toca una cabecera "
-                    "para reordenar; filtra por veredicto arriba.</div>")
-        lede = ("Qué nichos compensan de verdad: <b>paga</b> × <b>se busca</b> × <b>puedo rankear</b>. "
-                "Ordena y filtra a tu gusto.")
-        foot = ("Score = €/venta (35, satura 15€) + demanda (30, log, satura ~100k) + rankeabilidad "
-                "100−KD (25) + intención (10). €/mes = demanda × 4% captura × 3% conversión × €/venta "
-                "(supuestos editables en <code>radar.py</code>).<br>"
+            note = ("<span>✓</span><div><b>Nivel 2 · datos reales de España.</b> Demanda, "
+                    "tendencia&nbsp;12m, mes pico, CPC y <b>€ potenciales/mes</b> (techo si capturas "
+                    "~4% de las búsquedas y ~3% compra) de DataForSEO. Toca una cabecera para "
+                    "reordenar; filtra arriba.<br><b>KD (dificultad SEO): tómalo con pinzas.</b> La "
+                    "cobertura de DataForSEO en español es pobre (<i>s/d</i> = sin dato; los valores "
+                    "salen implausiblemente bajos), por eso NO cuenta en el score. Para saber si "
+                    "puedes rankear de verdad, mira a mano la página&nbsp;1 de Google del término.</div>")
+        lede = ("Qué nichos compensan de verdad: <b>paga</b> × <b>se busca</b>, con su estación y su "
+                "techo de ingresos. Ordena y filtra a tu gusto.")
+        foot = ("Score = €/venta (45, satura 15€) + demanda (40, log, satura ~100k) + intención (15). "
+                "€/mes = demanda × 4% captura × 3% conversión × €/venta (editable en <code>radar.py</code>). "
+                "KD = pista informativa, NO entra en el score (poco fiable en ES).<br>"
                 "Edita <code>nichos.csv</code> y la tabla <code>COMISIONES</code>, y vuelve a ejecutar.")
     else:
         eyebrow = "Nivel 1 · cribado gratis"
@@ -373,7 +371,7 @@ def _inner() -> str:
     <thead><tr>
       <th class="l">Nicho</th><th class="l">Categoría</th><th>Comisión</th><th>Ticket</th>
       <th>€/venta</th><th>Intención</th><th>Demanda</th><th>Tendencia&nbsp;12m</th>
-      <th>KD SEO</th><th>€/mes</th><th>Score</th><th>Veredicto</th>
+      <th>KD SEO?</th><th>€/mes</th><th>Score</th><th>Veredicto</th>
     </tr></thead>
     <tbody>{''.join(trs)}</tbody>
   </table></div>
