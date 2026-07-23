@@ -293,10 +293,37 @@ th:hover{color:var(--accent)}
 .chip{display:inline-block;font:650 11px/1 ui-monospace,monospace;letter-spacing:.02em;
   padding:5px 9px;border-radius:99px}
 .pend{color:var(--dim);opacity:.5}
-.chkcell{text-align:left;white-space:nowrap}
-.chk{display:inline-block;font:600 11px/1 -apple-system,system-ui,sans-serif;text-decoration:none;
-  color:var(--accent);border:1px solid var(--line);border-radius:7px;padding:5px 8px;margin:1px 3px 1px 0}
-.chk:hover{border-color:var(--accent);background:var(--accent-soft)}
+tr.nrow{cursor:pointer}
+tr.nrow:hover td{background:var(--accent-soft)}
+tr.nrow td.nicho::after{content:"›";color:var(--dim);margin-left:6px;font-weight:700}
+.ovl{position:fixed;inset:0;background:rgba(10,14,20,.55);display:flex;align-items:flex-end;
+  justify-content:center;z-index:50;padding:0}
+@media(min-width:640px){.ovl{align-items:center;padding:20px}}
+.ovl[hidden]{display:none}
+.sheet{background:var(--panel);border:1px solid var(--line);width:100%;max-width:460px;
+  border-radius:18px 18px 0 0;padding:22px 20px 26px;position:relative;
+  box-shadow:0 -8px 40px rgba(0,0,0,.25)}
+@media(min-width:640px){.sheet{border-radius:18px}}
+.dclose{position:absolute;top:14px;right:14px;background:var(--accent-soft);border:0;color:var(--ink);
+  width:32px;height:32px;border-radius:50%;font-size:15px;cursor:pointer}
+.dcat{font:600 11px/1 ui-monospace,monospace;text-transform:uppercase;letter-spacing:.08em;color:var(--accent)}
+.dtitle{font-size:21px;margin:4px 0 16px;text-transform:capitalize;text-wrap:balance}
+.dgrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:18px}
+.dgrid>div{background:var(--accent-soft);border-radius:10px;padding:9px 11px}
+.dgrid span{display:block;font:600 9px/1.3 ui-monospace,monospace;text-transform:uppercase;
+  letter-spacing:.05em;color:var(--dim)}
+.dgrid b{font-size:15px;font-variant-numeric:tabular-nums;text-transform:capitalize}
+.dcopy label{display:block;font-size:12px;color:var(--dim);margin-bottom:6px}
+.copyrow{display:flex;gap:8px;margin-bottom:8px}
+.copyrow input{flex:1;background:var(--bg);border:1px solid var(--line);border-radius:9px;
+  padding:11px 12px;color:var(--ink);font-size:15px;font-weight:600}
+.cbtn{background:var(--accent);border:0;color:#fff;border-radius:9px;padding:0 16px;
+  font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap}
+.cbtn:hover{filter:brightness(1.08)}
+.dlinks{display:flex;gap:10px;margin-top:14px}
+.dlink{flex:1;text-align:center;text-decoration:none;color:var(--accent);border:1px solid var(--line);
+  border-radius:10px;padding:11px;font-weight:600;font-size:13px}
+.dlink:hover{border-color:var(--accent);background:var(--accent-soft)}
 .foot{color:var(--dim);font-size:12px;margin-top:16px;line-height:1.6}
 .foot code{font-family:ui-monospace,monospace;background:var(--accent-soft);padding:1px 5px;border-radius:4px}
 """
@@ -380,12 +407,14 @@ def _inner() -> str:
             f"<span class='bar'><i style='width:{r['score']}%;background:{fg}'></i></span>"
             f"<span class='scoren'>{r['score']}</span></div></td>",
             f"<td><span class='chip' style='color:{fg};background:{bg}'>{r['verd']}</span></td>",
-            f"<td class='chkcell'>{_check_links(r['nicho'])}</td>",
         ]
-        trs.append(
-            f"<tr data-verd='{r['verd']}' data-nicho='{html.escape(r['nicho'])}'>"
-            + "".join(cells) + "</tr>"
-        )
+        # data-* con todo lo del nicho: la ficha se rellena desde aquí al hacer clic.
+        attrs = (f"data-verd='{r['verd']}' data-nicho=\"{html.escape(r['nicho'], quote=True)}\" "
+                 f"data-cat=\"{html.escape(r['cat'], quote=True)}\" data-com='{r['com']:.1f}' "
+                 f"data-ticket='{r['ticket']:.0f}' data-euro='{r['euro']:.2f}' "
+                 f"data-intent=\"{html.escape(r['intent'], quote=True)}\" "
+                 f"data-score='{r['score']}'")
+        trs.append(f"<tr class='nrow' {attrs}>" + "".join(cells) + "</tr>")
 
     if n2:
         eyebrow = ("Nivel 2 · demanda real (DEMO)" if mode == "mock"
@@ -418,14 +447,14 @@ def _inner() -> str:
         eyebrow = "Cribado gratis · 100% sin coste"
         kpi4 = (f"<div class='kpi'><div class='k'>En verde</div>"
                 f"<div class='v'>{fuertes} <small>de {n}</small></div></div>")
-        note = ("<span>✓</span><div><b>Todo gratis, sin depender de nadie.</b> El radar puntúa "
-                "por lo fiable: <b>€ por venta</b> (comisión Amazon × ticket) e <b>intención de "
-                "compra</b>. Eso te dice qué nichos <b>pagan</b>. Para lo que necesita ver Google "
-                "en directo —quién rankea y la tendencia—, cada fila trae dos botones: "
-                "<b>“Página&nbsp;1”</b> (abre la búsqueda en google.es) y <b>“Tendencia”</b> "
-                "(Google&nbsp;Trends). Filtra por veredicto y ordena tocando una cabecera.</div>")
-        lede = ("Qué nichos <b>pagan de verdad</b> (comisión × ticket × intención), y un clic para "
-                "comprobar tú mismo en Google quién rankea y la tendencia. Ordena y filtra.")
+        note = ("<span>✓</span><div><b>Toca cualquier nicho</b> para abrir su ficha: verás sus "
+                "datos (comisión, ticket, € por venta, score) y un <b>texto listo para copiar y "
+                "pegar en Google</b> (“mejor …”), además de botones para abrir la búsqueda y la "
+                "tendencia. Todo gratis: el score se basa en lo fiable (€ por venta × intención); "
+                "la rankeabilidad la compruebas tú en Google con un clic. Filtra por veredicto y "
+                "ordena tocando una cabecera.</div>")
+        lede = ("Qué nichos <b>pagan de verdad</b> (comisión × ticket × intención). Toca uno para "
+                "ver su ficha y copiar la búsqueda de Google. Ordena y filtra a tu gusto.")
         foot = ("Score = €/venta (60, satura a 15€) + intención de compra (40). Comisiones "
                 "Amazon estimadas y editables en <code>COMISIONES</code>.<br>"
                 "Flujo: el radar filtra por dinero → tú comprueba los finalistas con los botones "
@@ -460,12 +489,46 @@ def _inner() -> str:
     <thead><tr>
       <th class="l">Nicho</th><th class="l">Categoría</th><th>Comisión</th><th>Ticket</th>
       <th>€/venta</th><th>Intención</th>{'<th>Demanda</th><th>Tendencia&nbsp;12m</th><th>Rankeable?</th><th>€/mes</th>' if n2 else ''}
-      <th>Score</th><th>Veredicto</th><th>Comprobar</th>
+      <th>Score</th><th>Veredicto</th>
     </tr></thead>
     <tbody>{''.join(trs)}</tbody>
   </table></div>
 
   <p class="foot">{foot}</p>
+</div>
+
+<div class="ovl" id="ovl" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="dTitle">
+    <button class="dclose" id="dclose" aria-label="Cerrar">✕</button>
+    <div class="dcat" id="dCat"></div>
+    <h2 class="dtitle" id="dTitle"></h2>
+
+    <div class="dgrid">
+      <div><span>Comisión</span><b id="dCom"></b></div>
+      <div><span>Ticket</span><b id="dTicket"></b></div>
+      <div><span>€ por venta</span><b id="dEuro"></b></div>
+      <div><span>Intención</span><b id="dIntent"></b></div>
+      <div><span>Score</span><b id="dScore"></b></div>
+      <div><span>Veredicto</span><b id="dVerd"></b></div>
+    </div>
+
+    <div class="dcopy">
+      <label>Texto para buscar en Google (cópialo y pégalo):</label>
+      <div class="copyrow">
+        <input id="dQuery" readonly>
+        <button class="cbtn" id="dCopy">Copiar</button>
+      </div>
+      <div class="copyrow">
+        <input id="dQueryT" readonly>
+        <button class="cbtn" id="dCopyT">Copiar</button>
+      </div>
+    </div>
+
+    <div class="dlinks">
+      <a class="dlink" id="dGoogle" target="_blank" rel="noopener">Abrir en Google ↗</a>
+      <a class="dlink" id="dTrends" target="_blank" rel="noopener">Ver tendencia ↗</a>
+    </div>
+  </div>
 </div>
 <script>
 (function(){{
@@ -504,6 +567,45 @@ def _inner() -> str:
   }});
   var s=document.querySelector('.fsearch');
   if(s) s.addEventListener('input',function(){{q=s.value.trim().toLowerCase(); apply();}});
+
+  // ── Ficha del nicho: clic en una fila -> abre modal con datos + texto a copiar ──
+  var ovl=document.getElementById('ovl');
+  var $=function(id){{return document.getElementById(id);}};
+  function openSheet(tr){{
+    var n=tr.getAttribute('data-nicho');
+    $('dTitle').textContent=n;
+    $('dCat').textContent=tr.getAttribute('data-cat');
+    $('dCom').textContent=tr.getAttribute('data-com')+'%';
+    $('dTicket').textContent=tr.getAttribute('data-ticket')+'€';
+    $('dEuro').textContent=tr.getAttribute('data-euro')+'€';
+    $('dIntent').textContent=tr.getAttribute('data-intent');
+    $('dScore').textContent=tr.getAttribute('data-score');
+    $('dVerd').textContent=tr.getAttribute('data-verd');
+    var q='mejor '+n;
+    $('dQuery').value=q;
+    $('dQueryT').value=n;
+    $('dGoogle').href='https://www.google.es/search?q='+encodeURIComponent(q);
+    $('dTrends').href='https://trends.google.es/trends/explore?geo=ES&q='+encodeURIComponent(n);
+    ovl.hidden=false; document.body.style.overflow='hidden';
+  }}
+  function closeSheet(){{ ovl.hidden=true; document.body.style.overflow=''; }}
+  tb.addEventListener('click',function(e){{
+    var tr=e.target.closest('tr.nrow'); if(tr) openSheet(tr);
+  }});
+  $('dclose').addEventListener('click',closeSheet);
+  ovl.addEventListener('click',function(e){{ if(e.target===ovl) closeSheet(); }});
+  document.addEventListener('keydown',function(e){{ if(e.key==='Escape') closeSheet(); }});
+  function copyFrom(inputId, btn){{
+    var inp=$(inputId); inp.select(); inp.setSelectionRange(0,999);
+    var done=function(){{ var t=btn.textContent; btn.textContent='¡Copiado!';
+      setTimeout(function(){{btn.textContent=t;}},1200); }};
+    if(navigator.clipboard) navigator.clipboard.writeText(inp.value).then(done,function(){{
+      try{{document.execCommand('copy');done();}}catch(_){{}}
+    }});
+    else {{ try{{document.execCommand('copy');done();}}catch(_){{}} }}
+  }}
+  $('dCopy').addEventListener('click',function(){{copyFrom('dQuery',this);}});
+  $('dCopyT').addEventListener('click',function(){{copyFrom('dQueryT',this);}});
 }})();
 </script>"""
 
