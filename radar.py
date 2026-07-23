@@ -106,6 +106,37 @@ def potencial_mes(volume: int, euro: float) -> float:
     return volume * CAPTURE * CONVERSION * euro
 
 
+# ── Probabilidad de HUECO (heurística del patrón validado en google.es) ──
+# 🟢 Nichos técnicos/especializados (jardín, herramientas, mascotas, bebé) →
+#    rankean webs pequeñas. 🔴 Electrónica/informática y cocina mainstream →
+#    copados por grandes tiendas (MediaMarkt, PcComponentes) y medios. EDITABLE.
+GAP_CAT = {
+    "jardin": "Alta", "herramientas": "Alta", "mascotas": "Alta", "bebe": "Alta",
+    "muebles": "Media", "deportes": "Media", "belleza": "Media", "salud": "Media",
+    "equipaje": "Media", "hogar": "Media",
+    "cocina": "Baja", "electronica": "Baja", "informatica": "Baja",
+}
+# Ajustes por nicho concreto (se desvían de su categoría).
+GAP_NICHE = {
+    "robot aspirador": "Baja",           # muy popular, lo copan medios (OCU, Infobae)
+    "purificador de aire": "Alta", "deshumidificador": "Alta", "humidificador": "Alta",
+    "silla oficina ergonomica": "Alta", "escritorio elevable": "Alta",
+    "mancuernas ajustables": "Alta", "banco de musculacion": "Alta",
+    "tienda de campaña": "Alta", "mochila de senderismo": "Alta", "saco de dormir": "Alta",
+    "silla gaming": "Baja", "proyector": "Media",
+    "smartwatch": "Baja", "tablet": "Baja", "altavoz bluetooth": "Baja",
+}
+GAP_RANK = {"Alta": 3, "Media": 2, "Baja": 1}
+# Nichos ya COMPROBADOS a mano en google.es (se muestran con ✓).
+VERIFIED = {"robot cortacesped": "Alta"}
+
+
+def gap_prob(nicho: str, cat: str) -> str:
+    if nicho in VERIFIED:
+        return VERIFIED[nicho]
+    return GAP_NICHE.get(nicho, GAP_CAT.get(cat, "Media"))
+
+
 # Grandes dominios que una web nueva de afiliación NO puede desbancar (retailers,
 # marketplaces y medios con autoridad). EDITABLE: añade los que veas repetirse.
 # Si la página 1 está llena de estos, el nicho es difícil; si asoman webs nicho
@@ -206,11 +237,14 @@ def _rows():
             sc, verd = score(euro, ipts)
             vol, cpc, monthly, peak, pot = None, None, [], "", None
             rank_lab, big, aio = "", 0, False
+        gap = gap_prob(nicho, cat)
         out.append(dict(nicho=nicho, cat=cat, com=com, ticket=ticket, euro=euro,
                         intent=ilabel, score=sc, verd=verd, vol=vol, cpc=cpc,
                         monthly=monthly, peak=peak, pot=pot,
-                        rank=rank_lab, big=big, aio=aio))
-    out.sort(key=lambda x: x["score"], reverse=True)
+                        rank=rank_lab, big=big, aio=aio,
+                        gap=gap, verified=(nicho in VERIFIED)))
+    # Orden por PROBABILIDAD DE HUECO primero (Alta→Baja), luego por dinero (score).
+    out.sort(key=lambda x: (GAP_RANK.get(x["gap"], 2), x["score"]), reverse=True)
     return out, mode
 
 
@@ -375,9 +409,17 @@ def _inner() -> str:
     trs = []
     for r in rows:
         fg, bg = _color(r["verd"])
+        gcol = {"Alta": "var(--good)", "Media": "var(--warn)", "Baja": "var(--bad)"}[r["gap"]]
+        gbg = {"Alta": "var(--good-bg)", "Media": "var(--warn-bg)", "Baja": "var(--bad-bg)"}[r["gap"]]
+        vmark = " ✓" if r.get("verified") else ""
+        gap_cell = (f"<td data-s='{GAP_RANK[r['gap']]}'>"
+                    f"<span class='chip' style='color:{gcol};background:{gbg}' "
+                    f"title='Probabilidad de que una web pequeña rankee (heurística)'>"
+                    f"{r['gap']}{vmark}</span></td>")
         cells = [
             f"<td class='l nicho'>{html.escape(r['nicho'])}</td>",
             f"<td class='l cat'>{html.escape(r['cat'])}</td>",
+            gap_cell,
             f"<td data-s='{r['com']}'>{r['com']:.1f}%</td>",
             f"<td data-s='{r['ticket']}'>{r['ticket']:.0f}€</td>",
             f"<td class='euro' data-s='{r['euro']}'>{r['euro']:.2f}€</td>",
@@ -413,7 +455,7 @@ def _inner() -> str:
                  f"data-cat=\"{html.escape(r['cat'], quote=True)}\" data-com='{r['com']:.1f}' "
                  f"data-ticket='{r['ticket']:.0f}' data-euro='{r['euro']:.2f}' "
                  f"data-intent=\"{html.escape(r['intent'], quote=True)}\" "
-                 f"data-score='{r['score']}'")
+                 f"data-score='{r['score']}' data-gap=\"{r['gap']}{'  ✓ visto' if r.get('verified') else ''}\"")
         trs.append(f"<tr class='nrow' {attrs}>" + "".join(cells) + "</tr>")
 
     if n2:
@@ -447,18 +489,20 @@ def _inner() -> str:
         eyebrow = "Cribado gratis · 100% sin coste"
         kpi4 = (f"<div class='kpi'><div class='k'>En verde</div>"
                 f"<div class='v'>{fuertes} <small>de {n}</small></div></div>")
-        note = ("<span>✓</span><div><b>Toca cualquier nicho</b> para abrir su ficha: verás sus "
-                "datos (comisión, ticket, € por venta, score) y un <b>texto listo para copiar y "
-                "pegar en Google</b> (“mejor …”), además de botones para abrir la búsqueda y la "
-                "tendencia. Todo gratis: el score se basa en lo fiable (€ por venta × intención); "
-                "la rankeabilidad la compruebas tú en Google con un clic. Filtra por veredicto y "
-                "ordena tocando una cabecera.</div>")
-        lede = ("Qué nichos <b>pagan de verdad</b> (comisión × ticket × intención). Toca uno para "
-                "ver su ficha y copiar la búsqueda de Google. Ordena y filtra a tu gusto.")
-        foot = ("Score = €/venta (60, satura a 15€) + intención de compra (40). Comisiones "
-                "Amazon estimadas y editables en <code>COMISIONES</code>.<br>"
-                "Flujo: el radar filtra por dinero → tú comprueba los finalistas con los botones "
-                "<b>Página&nbsp;1</b> / <b>Tendencia</b> (gratis). Edita <code>nichos.csv</code> y vuelve a ejecutar.")
+        note = ("<span>✓</span><div>Ordenado por <b>“Hueco?”</b>: probabilidad de que una web "
+                "pequeña <b>pueda rankear</b> (patrón validado a mano). 🟢 <b>Alta</b> = nichos "
+                "técnicos/especializados (jardín, herramientas, mascotas, bebé) donde rankean "
+                "webs de nicho. 🔴 <b>Baja</b> = electrónica/cocina mainstream, copados por "
+                "grandes tiendas (MediaMarkt, PcComponentes) y medios. ✓ = comprobado en google.es. "
+                "<b>Toca un nicho</b> para su ficha + el texto para copiar y buscar tú mismo. "
+                "Es una estimación: confírmala siempre mirando la página 1.</div>")
+        lede = ("Ordenados por <b>dónde hay hueco</b> para una web pequeña × lo que <b>pagan</b>. "
+                "Toca un nicho para su ficha y copiar la búsqueda de Google.")
+        foot = ("Orden = Hueco? (Alta→Baja) y, a igualdad, Score = €/venta (60, satura 15€) + "
+                "intención (40). “Hueco?” es una heurística por categoría/nicho (mapas "
+                "<code>GAP_CAT</code>/<code>GAP_NICHE</code>, editables), NO un dato: confírmala en Google.<br>"
+                "Flujo: filtra los de Hueco Alta → toca uno → copia la búsqueda → compruébalo en "
+                "google.es. Edita <code>nichos.csv</code> y vuelve a ejecutar.")
 
     return f"""<title>Radar de nichos de afiliación</title>
 <style>{CSS}</style>
@@ -487,7 +531,7 @@ def _inner() -> str:
 
   <div class="tablewrap"><table id="radar">
     <thead><tr>
-      <th class="l">Nicho</th><th class="l">Categoría</th><th>Comisión</th><th>Ticket</th>
+      <th class="l">Nicho</th><th class="l">Categoría</th><th>Hueco?</th><th>Comisión</th><th>Ticket</th>
       <th>€/venta</th><th>Intención</th>{'<th>Demanda</th><th>Tendencia&nbsp;12m</th><th>Rankeable?</th><th>€/mes</th>' if n2 else ''}
       <th>Score</th><th>Veredicto</th>
     </tr></thead>
@@ -507,7 +551,7 @@ def _inner() -> str:
       <div><span>Comisión</span><b id="dCom"></b></div>
       <div><span>Ticket</span><b id="dTicket"></b></div>
       <div><span>€ por venta</span><b id="dEuro"></b></div>
-      <div><span>Intención</span><b id="dIntent"></b></div>
+      <div><span>Hueco?</span><b id="dGap"></b></div>
       <div><span>Score</span><b id="dScore"></b></div>
       <div><span>Veredicto</span><b id="dVerd"></b></div>
     </div>
@@ -578,7 +622,7 @@ def _inner() -> str:
     $('dCom').textContent=tr.getAttribute('data-com')+'%';
     $('dTicket').textContent=tr.getAttribute('data-ticket')+'€';
     $('dEuro').textContent=tr.getAttribute('data-euro')+'€';
-    $('dIntent').textContent=tr.getAttribute('data-intent');
+    $('dGap').textContent=tr.getAttribute('data-gap');
     $('dScore').textContent=tr.getAttribute('data-score');
     $('dVerd').textContent=tr.getAttribute('data-verd');
     var q='mejor '+n;
