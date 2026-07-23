@@ -116,12 +116,29 @@ GAP_CAT = {
     "equipaje": "Media", "hogar": "Media",
     "cocina": "Baja", "electronica": "Baja", "informatica": "Baja",
 }
-# Ajustes por nicho concreto (se desvían de su categoría).
+# Ajustes por nicho concreto (se desvían de su categoría). Actualizado con el
+# PRE-FILTRO SERP del ultracode 2026-07-23 (buscador orientativo; ver
+# INFORME-PREFILTRO-2026-07-23.md): verde→Alta, amarillo→Media, rojo→Baja.
 GAP_NICHE = {
     "robot aspirador": "Baja",           # muy popular, lo copan medios (OCU, Infobae)
-    "purificador de aire": "Alta", "deshumidificador": "Alta", "humidificador": "Alta",
-    "silla oficina ergonomica": "Alta", "escritorio elevable": "Alta",
-    "mancuernas ajustables": "Alta", "banco de musculacion": "Alta",
+    # rojos del pre-filtro:
+    "purificador de aire": "Baja", "aire acondicionado portatil": "Baja",
+    "aspirador escoba": "Baja", "bicicleta estatica": "Baja",
+    # amarillos del pre-filtro (dudosos):
+    "silla oficina ergonomica": "Media", "deshumidificador": "Media",
+    "hidrolimpiadora": "Media", "compresor de aire": "Media",
+    "extractor de leche": "Media", "colchon viscoelastico": "Media",
+    "fuente de agua para gatos": "Media", "transportin para perro": "Media",
+    "eliptica": "Media", "placa solar portatil": "Media",
+    # verdes del pre-filtro (pendientes de captura del operador):
+    "desbrozadora": "Alta", "cortacesped": "Alta", "motosierra electrica": "Alta",
+    "silla de coche bebe": "Alta", "trona de bebe": "Alta", "vigilabebes": "Alta",
+    "cochecito gemelar": "Alta", "estacion de energia portatil": "Alta",
+    "descalcificador de agua": "Alta", "canape abatible": "Alta",
+    "almohada cervical": "Alta", "mancuernas ajustables": "Alta",
+    "banco de musculacion": "Alta", "estacion de dominadas": "Alta",
+    "lampara escritorio led": "Alta",
+    "humidificador": "Media",
     "tienda de campaña": "Alta", "mochila de senderismo": "Alta", "saco de dormir": "Alta",
     "silla gaming": "Baja", "proyector": "Media",
     "smartwatch": "Baja", "tablet": "Baja", "altavoz bluetooth": "Baja",
