@@ -166,6 +166,11 @@ CONFIRMED = {
     "desbrozadora": "VIABLE: especialistas agrícolas rankean (Casa Sibarita, SEAL, Agroarenas) + demanda fuerte 60-100 con 50 queries. Mucho Shopping y ticket bajo (4,20€/venta). Refuerza tema jardín.",
     "motosierra electrica": "VIABLE: una web de nicho (FestMás) rankea #1 + 'cómo elegir' de nicho arriba (Santino.es, Ideas.es). Demanda fuerte estacional con cola rica (batería, pequeña, lidl, makita, aceite). El pero: SERP muy comercial (Shopping enorme + Leroy/ManoMano/Idealo + patrocinado) → solo ganas con comparativa mejor. Familia jardín.",
     "trona de bebe": "VIABLE: 4º nicho del tema BEBÉ (Carlitos Baby, Bebemálaga, Nou mesos, Bebépolis rankean). Demanda estable 40-60. Ticket bajo → pieza del sitio bebé, no pilar.",
+    "bicicleta electrica": "VIABLE FUERTE: webs especialistas de bici copan la pág.1 (EBIKE.ES #1, Motor Verde, sube y baja bikes, Con Alforjas, Tuvalum, Navarro Hermanos). Casi sin medios generalistas ni AI Overview. Ticket ALTO (800-4.000€ = comisión gorda aun al 1-3%). Demanda alta.",
+    "taladro percutor": "VIABLE (herramientas): web de nicho TodoTaladros rankea #2 + ferreterías especialistas (MasFerretería, Mister Worker). Demanda fuerte sostenida con 48 queries (bosch, makita, dewalt, batería). El pero: Leroy #1, OCU/La Vanguardia presentes y Shopping enorme.",
+    "saco de dormir": "VIABLE moderado ESTACIONAL (camping): nichos outdoor rankean (Con Alforjas, RayonRando, Camping Arena Blanca, Wearealtus). Demanda fuerte 50-100 y 50 queries. El pero: Decathlon #1 + intención navegacional a Decathlon. Familia camping (con tienda de campaña).",
+    "almohada cervical": "VIABLE moderado (tema DESCANSO): nicho Confolar #1 + La Casa Sibarita, Bed's, Ortopedia Mimas. Demanda estable ~40-60, 35 queries (tempur, viscoelastica, ergonomica). AVISO YMYL: es producto de salud, cuidado con afirmaciones médicas y E-E-A-T. Empareja con canapé abatible.",
+    "rascador para gatos": "VIABLE moderado / APOYO baja prioridad: nicho Patitas&co #1 + Pampermut, Etohelp. El pero: ticket bajo (20-120€), pet-retail (Kiwoko/Tiendanimal/ECI) y bastante intención DIY ('hacer/como hacer rascador'). Pieza de un sitio mascotas, no pilar.",
 }
 
 
