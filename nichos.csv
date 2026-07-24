@@ -33,14 +33,12 @@ tv 55 pulgadas,electronica,550
 ereader,electronica,130
 webcam,informatica,70
 bicicleta electrica,deportes,900
-patinete electrico,deportes,450
 cinta de correr,deportes,600
 bicicleta estatica,deportes,250
 eliptica,deportes,350
 mancuernas ajustables,deportes,180
 banco de musculacion,deportes,200
 tienda de campaña,deportes,150
-mochila de senderismo,deportes,90
 saco de dormir,deportes,70
 cepillo de dientes electrico,belleza,60
 secador de pelo,belleza,90
@@ -50,11 +48,9 @@ bascula inteligente,salud,40
 tensiometro,salud,50
 silla de coche bebe,bebe,250
 cochecito de bebe,bebe,400
-vigilabebes,bebe,120
 trona de bebe,bebe,130
 extractor de leche,bebe,150
 taladro percutor,herramientas,80
-atornillador electrico,herramientas,60
 hidrolimpiadora,herramientas,150
 cortacesped,jardin,200
 robot cortacesped,jardin,700
@@ -62,7 +58,6 @@ desbrozadora,jardin,140
 generador electrico,herramientas,300
 compresor de aire,herramientas,180
 fuente de agua para gatos,mascotas,35
-comedero automatico gatos,mascotas,60
 rascador para gatos,mascotas,50
 transportin para perro,mascotas,70
 maleta de cabina,equipaje,80
@@ -71,5 +66,3 @@ cochecito gemelar,bebe,500
 estacion de energia portatil,electronica,600
 descalcificador de agua,hogar,350
 motosierra electrica,herramientas,120
-lampara escritorio led,hogar,40
-estacion de dominadas,deportes,120

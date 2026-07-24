@@ -132,18 +132,30 @@ GAP_NICHE = {
     "eliptica": "Media", "placa solar portatil": "Media",
     # verdes del pre-filtro (pendientes de captura del operador):
     "desbrozadora": "Alta", "cortacesped": "Alta", "motosierra electrica": "Alta",
-    "silla de coche bebe": "Alta", "trona de bebe": "Alta", "vigilabebes": "Alta",
+    "silla de coche bebe": "Alta", "trona de bebe": "Alta",
     "cochecito gemelar": "Alta", "estacion de energia portatil": "Alta",
     "descalcificador de agua": "Alta", "canape abatible": "Alta",
     "almohada cervical": "Alta", "mancuernas ajustables": "Alta",
-    "banco de musculacion": "Alta", "estacion de dominadas": "Alta",
-    "lampara escritorio led": "Alta",
+    "banco de musculacion": "Alta",
     "humidificador": "Media",
-    "tienda de campaña": "Alta", "mochila de senderismo": "Alta", "saco de dormir": "Alta",
+    "tienda de campaña": "Alta", "saco de dormir": "Alta",
     "silla gaming": "Baja", "proyector": "Media",
     "smartwatch": "Baja", "tablet": "Baja", "altavoz bluetooth": "Baja",
 }
 GAP_RANK = {"Alta": 3, "Media": 2, "Baja": 1}
+
+# DESCARTADOS a mano en google.es (NO re-añadir a nichos.csv). Motivo entre ():
+# portatil gaming (medios+shopping) · patinete electrico (Xataka+intención regulatoria)
+# · vigilabebes (muro El País/La Vanguardia/Xataka+Amazon) · comedero automatico gatos
+# (medios+pet-retail) · atornillador electrico (muro medios; a lo sumo apoyo de taladros)
+# · mochila de senderismo (Trends plano + navegacional a Decathlon) · lampara escritorio
+# led (Trends 0 + ticket mínimo) · estacion de dominadas (0 demanda) · arenero
+# autolimpiable (AI Overview) · robot de cocina / freidora de aire (medios+Shopping).
+REJECTED_MANUAL = {
+    "portatil gaming", "patinete electrico", "vigilabebes", "comedero automatico gatos",
+    "atornillador electrico", "mochila de senderismo", "lampara escritorio led",
+    "estacion de dominadas", "arenero autolimpiable", "robot de cocina", "freidora de aire",
+}
 
 # LISTA DE TRABAJO: nichos COMPROBADOS a mano en google.es y CONFIRMADOS viables
 # (🟢, vamos a hacerlos). Se muestran con ✓, con Hueco Alta, y en una sección
