@@ -161,6 +161,8 @@ CONFIRMED = {
     "canape abatible": "Viable moderado: 6 webs nicho descanso rankean pero 3 medios presentes (La Vanguardia, ELLE, La Razón) y varias pequeñas son tiendas. Demanda estable ~40-60 y CRECIENDO (+80% mes, +200% año).",
     "banco de musculacion": "SERP buena (webs nicho fitness) PERO Trends plano con picos sueltos = demanda mínima. Como el gemelar: solo artículo de APOYO, no pilar.",
     "cortacesped": "Viable moderado 2ª fila: hueco (Casa Sibarita, Infojardín, Mister Worker) pero 3 grandes + mucho Shopping. Demanda alta estacional; lo más buscado es la variante ROBOT (ya validada). Apoyo del tema jardín.",
+    "mancuernas ajustables": "Viable moderado: hueco parcial (Tu Propio Gym, mundofitness) pero Decathlon+Amazon dominan queries y doble Shopping. Demanda fuerte 75-100.",
+    "tienda de campaña": "Viable moderado ESTACIONAL (pico verano): webs nicho camping rankean pero Decathlon rey de la categoría + Shopping masivo. Atacar de cara a primavera.",
 }
 
 
