@@ -164,6 +164,7 @@ CONFIRMED = {
     "mancuernas ajustables": "Viable moderado: hueco parcial (Tu Propio Gym, mundofitness) pero Decathlon+Amazon dominan queries y doble Shopping. Demanda fuerte 75-100.",
     "tienda de campaña": "Viable moderado ESTACIONAL (pico verano): webs nicho camping rankean pero Decathlon rey de la categoría + Shopping masivo. Atacar de cara a primavera.",
     "desbrozadora": "VIABLE: especialistas agrícolas rankean (Casa Sibarita, SEAL, Agroarenas) + demanda fuerte 60-100 con 50 queries. Mucho Shopping y ticket bajo (4,20€/venta). Refuerza tema jardín.",
+    "motosierra electrica": "VIABLE: una web de nicho (FestMás) rankea #1 + 'cómo elegir' de nicho arriba (Santino.es, Ideas.es). Demanda fuerte estacional con cola rica (batería, pequeña, lidl, makita, aceite). El pero: SERP muy comercial (Shopping enorme + Leroy/ManoMano/Idealo + patrocinado) → solo ganas con comparativa mejor. Familia jardín.",
     "trona de bebe": "VIABLE: 4º nicho del tema BEBÉ (Carlitos Baby, Bebemálaga, Nou mesos, Bebépolis rankean). Demanda estable 40-60. Ticket bajo → pieza del sitio bebé, no pilar.",
 }
 

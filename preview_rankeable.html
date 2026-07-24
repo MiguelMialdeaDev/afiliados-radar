@@ -1,0 +1,156 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body><title>Radar de nichos de afiliación</title>
+<style>
+:root{
+  --bg:#eef1f5; --panel:#ffffff; --line:#dfe4ec; --ink:#1b2230; --dim:#69727f;
+  --accent:#4f63e0; --accent-soft:#eef0fd;
+  --good:#1f9d57; --good-bg:#e6f5ec; --warn:#c1841a; --warn-bg:#faf1dd; --bad:#d34a4a; --bad-bg:#fbe9e9;
+  --bar-track:#e7ebf1;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#0e1218; --panel:#161c25; --line:#26303c; --ink:#e6ebf2; --dim:#8a95a4;
+  --accent:#7d8ff2; --accent-soft:#1c2440;
+  --good:#4cc585; --good-bg:#12321f; --warn:#e0a63e; --warn-bg:#33280f; --bad:#ef6b6b; --bad-bg:#3a1a1a;
+  --bar-track:#232c38;
+}}
+:root[data-theme="light"]{
+  --bg:#eef1f5; --panel:#fff; --line:#dfe4ec; --ink:#1b2230; --dim:#69727f;
+  --accent:#4f63e0; --accent-soft:#eef0fd; --good:#1f9d57; --good-bg:#e6f5ec;
+  --warn:#c1841a; --warn-bg:#faf1dd; --bad:#d34a4a; --bad-bg:#fbe9e9; --bar-track:#e7ebf1;
+}
+:root[data-theme="dark"]{
+  --bg:#0e1218; --panel:#161c25; --line:#26303c; --ink:#e6ebf2; --dim:#8a95a4;
+  --accent:#7d8ff2; --accent-soft:#1c2440; --good:#4cc585; --good-bg:#12321f;
+  --warn:#e0a63e; --warn-bg:#33280f; --bad:#ef6b6b; --bad-bg:#3a1a1a; --bar-track:#232c38;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif}
+.wrap{max-width:940px;margin:0 auto;padding:32px 20px 60px}
+.eyebrow{font:600 11px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--accent)}
+h1{font-size:26px;margin:8px 0 4px;letter-spacing:-.01em;text-wrap:balance}
+.lede{color:var(--dim);font-size:14px;margin:0 0 22px;max-width:60ch}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+@media(max-width:640px){.kpis{grid-template-columns:repeat(2,1fr)}}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 15px}
+.kpi .k{font:600 10px/1 ui-monospace,monospace;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+.kpi .v{font-size:22px;font-weight:750;margin-top:6px;letter-spacing:-.01em;
+  font-variant-numeric:tabular-nums}
+.kpi .v small{font-size:12px;font-weight:600;color:var(--dim)}
+.note{display:flex;gap:10px;background:var(--accent-soft);border:1px solid var(--line);
+  border-radius:12px;padding:12px 14px;font-size:13px;color:var(--ink);margin-bottom:22px;line-height:1.5}
+.note b{color:var(--accent)}
+.tablewrap{overflow-x:auto;background:var(--panel);border:1px solid var(--line);border-radius:14px}
+table{width:100%;border-collapse:collapse;min-width:900px}
+th,td{padding:12px 14px;text-align:right;border-bottom:1px solid var(--line);
+  font-variant-numeric:tabular-nums;white-space:nowrap}
+tr:last-child td{border-bottom:0}
+th{font:600 10px/1.2 ui-monospace,monospace;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--dim);background:transparent;position:sticky;top:0}
+td.l,th.l{text-align:left}
+td.nicho{font-weight:650}
+td.cat{color:var(--dim);font-size:13px;text-transform:capitalize}
+td.euro{font-weight:750;font-size:15px}
+.scorecell{display:flex;align-items:center;gap:10px;justify-content:flex-end}
+.bar{width:74px;height:7px;border-radius:5px;background:var(--bar-track);overflow:hidden;flex:0 0 auto}
+.bar i{display:block;height:100%;border-radius:5px}
+.scoren{font-weight:750;width:26px;text-align:right;font-variant-numeric:tabular-nums}
+.trendcell{text-align:left}
+.trend{display:flex;align-items:center;gap:8px}
+.trend svg{flex:0 0 auto;opacity:.85}
+.peak{font:600 10px/1 ui-monospace,monospace;color:var(--dim);text-transform:uppercase;letter-spacing:.03em;white-space:nowrap}
+.kd{font-weight:650;font-size:13px}
+.rankcell{text-align:left}
+.big{display:block;font:600 10px/1.2 ui-monospace,monospace;color:var(--dim);margin-top:2px}
+.aio{font:700 9px/1 ui-monospace,monospace;color:var(--bad);border:1px solid var(--bad);
+  border-radius:4px;padding:1px 4px;margin-left:4px;vertical-align:middle}
+.filters{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.flabel{font:600 11px/1 ui-monospace,monospace;text-transform:uppercase;letter-spacing:.08em;color:var(--dim)}
+.fbtn{font:600 12px/1 -apple-system,system-ui,sans-serif;padding:7px 13px;border-radius:99px;
+  border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer}
+.fbtn:hover{border-color:var(--accent)}
+.fbtn.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.fsearch{margin-left:auto;font-size:13px;padding:7px 12px;border-radius:9px;
+  border:1px solid var(--line);background:var(--panel);color:var(--ink);min-width:150px}
+.fsearch:focus{outline:2px solid var(--accent);outline-offset:1px}
+th{cursor:pointer;user-select:none}
+th:hover{color:var(--accent)}
+.chip{display:inline-block;font:650 11px/1 ui-monospace,monospace;letter-spacing:.02em;
+  padding:5px 9px;border-radius:99px}
+.pend{color:var(--dim);opacity:.5}
+.foot{color:var(--dim);font-size:12px;margin-top:16px;line-height:1.6}
+.foot code{font-family:ui-monospace,monospace;background:var(--accent-soft);padding:1px 5px;border-radius:4px}
+</style>
+<div class="wrap">
+  <div class="eyebrow">Nivel 2 · demanda real (DEMO)</div>
+  <h1>Radar de nichos de afiliación</h1>
+  <p class="lede">Qué nichos compensan de verdad: <b>paga</b> × <b>se busca</b> × <b>puedes entrar</b>. Ordena y filtra a tu gusto.</p>
+
+  <div class="kpis">
+    <div class="kpi"><div class="k">Nichos</div><div class="v">10</div></div>
+    <div class="kpi"><div class="k">Top</div><div class="v" style="font-size:15px;line-height:1.25">bicicleta electrica<br><small>score 78</small></div></div>
+    <div class="kpi"><div class="k">Mejor €/venta</div><div class="v">27.00€ <small>bicicleta electrica</small></div></div>
+    <div class='kpi'><div class='k'>Potencial top</div><div class='v'>458€ <small>bicicleta electrica/mes</small></div></div>
+  </div>
+
+  <div class="note"><span>⚠</span><div><b>Datos de prueba (mock).</b> El pipeline funciona; estas cifras de demanda son ficticias. Con tus credenciales de DataForSEO en <code>.env</code> se rellenan con volumen real de España.</div></div>
+
+  <div class="filters">
+    <span class="flabel">Filtrar:</span>
+    <button class="fbtn on" data-f="all">Todos</button>
+    <button class="fbtn" data-f="Fuerte">Fuerte</button>
+    <button class="fbtn" data-f="Revisar">Revisar</button>
+    <button class="fbtn" data-f="Flojo">Flojo</button>
+    <input class="fsearch" type="search" placeholder="Buscar nicho…" aria-label="Buscar nicho">
+  </div>
+
+  <div class="tablewrap"><table id="radar">
+    <thead><tr>
+      <th class="l">Nicho</th><th class="l">Categoría</th><th>Comisión</th><th>Ticket</th>
+      <th>€/venta</th><th>Intención</th><th>Demanda</th><th>Tendencia&nbsp;12m</th>
+      <th>Rankeable?</th><th>€/mes</th><th>Score</th><th>Veredicto</th>
+    </tr></thead>
+    <tbody><tr data-verd='Fuerte' data-nicho='bicicleta electrica'><td class='l nicho'>bicicleta electrica</td><td class='l cat'>deportes</td><td data-s='3.0'>3.0%</td><td data-s='900.0'>900€</td><td class='euro' data-s='27.0'>27.00€</td><td>Media</td><td data-s='14150'>14.150/mes</td><td class='trendcell'><div class='trend'><svg viewBox='0 0 68 20' width='68' height='20' preserveAspectRatio='none' aria-hidden='true'><polyline points='1.0,12.7 7.0,12.7 13.0,12.7 19.0,2.0 25.0,2.0 31.0,2.0 37.0,12.7 43.0,12.7 49.0,12.7 55.0,18.0 61.0,18.0 67.0,18.0' fill='none' stroke='var(--accent)' stroke-width='1.5' stroke-linejoin='round' stroke-linecap='round'/></svg><span class='peak'>pico may</span></div></td><td class='rankcell' data-s='1'><span class='kd' style='color:var(--warn)' title='7/10 grandes en la página 1 de Google'>Media</span><span class='big'>7/10 grandes</span></td><td class='euro' data-s='458.46000000000004'><b>458€</b></td><td data-s='78'><div class='scorecell'><span class='bar'><i style='width:78%;background:var(--good)'></i></span><span class='scoren'>78</span></div></td><td><span class='chip' style='color:var(--good);background:var(--good-bg)'>Fuerte</span></td></tr><tr data-verd='Fuerte' data-nicho='colchon viscoelastico'><td class='l nicho'>colchon viscoelastico</td><td class='l cat'>muebles</td><td data-s='3.0'>3.0%</td><td data-s='300.0'>300€</td><td class='euro' data-s='9.0'>9.00€</td><td>Media</td><td data-s='5050'>5.050/mes</td><td class='trendcell'><div class='trend'><svg viewBox='0 0 68 20' width='68' height='20' preserveAspectRatio='none' aria-hidden='true'><polyline points='1.0,12.7 7.0,2.0 13.0,2.0 19.0,2.0 25.0,12.7 31.0,12.7 37.0,12.7 43.0,18.0 49.0,18.0 55.0,18.0 61.0,18.0 67.0,18.0' fill='none' stroke='var(--accent)' stroke-width='1.5' stroke-linejoin='round' stroke-linecap='round'/></svg><span class='peak'>pico mar</span></div></td><td class='rankcell' data-s='2'><span class='kd' style='color:var(--good)' title='5/10 grandes en la página 1 de Google'>Accesible</span><span class='big'>5/10 grandes</span></td><td class='euro' data-s='54.54'><b>55€</b></td><td data-s='65'><div class='scorecell'><span class='bar'><i style='width:65%;background:var(--good)'></i></span><span class='scoren'>65</span></div></td><td><span class='chip' style='color:var(--good);background:var(--good-bg)'>Fuerte</span></td></tr><tr data-verd='Revisar' data-nicho='robot aspirador'><td class='l nicho'>robot aspirador</td><td class='l cat'>hogar</td><td data-s='3.0'>3.0%</td><td data-s='250.0'>250€</td><td class='euro' data-s='7.5'>7.50€</td><td>Media</td><td data-s='16600'>16.600/mes</td><td class='trendcell'><div class='trend'><svg viewBox='0 0 68 20' width='68' height='20' preserveAspectRatio='none' aria-hidden='true'><polyline points='1.0,18.0 7.0,18.0 13.0,18.0 19.0,18.0 25.0,18.0 31.0,18.0 37.0,18.0 43.0,12.7 49.0,12.7 55.0,12.7 61.0,2.0 67.0,2.0' fill='none' stroke='var(--accent)' stroke-width='1.5' stroke-linejoin='round' stroke-linecap='round'/></svg><span class='peak'>pico dic</span></div></td><td class='rankcell' data-s='1'><span class='kd' style='color:var(--warn)' title='7/10 grandes en la página 1 de Google'>Media</span><span class='big'>7/10 grandes</span></td><td class='euro' data-s='149.39999999999998'><b>149€</b></td><td data-s='61'><div class='scorecell'><span class='bar'><i style='width:61%;background:var(--warn)'></i></span><span class='scoren'>61</span></div></td><td><span class='chip' style='color:var(--warn);background:var(--warn-bg)'>Revisar</span></td></tr><tr data-verd='Revisar' data-nicho='monitor gaming'><td class='l nicho'>monitor gaming</td><td class='l cat'>informatica</td><td data-s='2.5'>2.5%</td><td data-s='250.0'>250€</td><td class='euro' data-s='6.25'>6.25€</td><td>Media</td><td data-s='19400'>19.400/mes</td><td class='trendcell'><div class='trend'><svg viewBox='0 0 68 20' width='68' height='20' preserveAspectRatio='none' aria-hidden='true'><polyline points='1.0,18.0 7.0,18.0 13.0,18.0 19.0,12.7 25.0,12.7 31.0,12.7 37.0,2.0 43.0,2.0 49.0,2.0 55.0,12.7 61.0,12.7 67.0,12.7' fill='none' stroke='var(--accent)' stroke-width='1.5' stroke-linejoin='round' stroke-linecap='round'/></svg><span class='peak'>pico ago</span></div></td><td class='rankcell' data-s='1'><span class='kd' style='color:var(--warn)' title='7/10 grandes en la página 1 de Google'>Media</span><span class='big'>7/10 grandes</span></td><td class='euro' data-s='145.49999999999997'><b>145€</b></td><td data-s='58'><div class='scorecell'><span class='bar'><i style='width:58%;background:var(--warn)'></i></span><span class='scoren'>58</span></div></td><td><span class='chip' style='color:var(--warn);background:var(--warn-bg)'>Revisar</span></td></tr><tr data-verd='Revisar' data-nicho='freidora de aire'><td class='l nicho'>freidora de aire</td><td class='l cat'>cocina</td><td data-s='4.0'>4.0%</td><td data-s='90.0'>90€</td><td class='euro' data-s='3.6'>3.60€</td><td>Media</td><td data-s='9250'>9.250/mes</td><td class='trendcell'><div class='trend'><svg viewBox='0 0 68 20' width='68' height='20' preserveAspectRatio='none' aria-hidden='true'><polyline points='1.0,12.7 7.0,2.0 13.0,2.0 19.0,2.0 25.0,12.7 31.0,12.7 37.0,12.7 43.0,18.0 49.0,18.0 55.0,18.0 61.0,18.0 67.0,18.0' fill='none' stroke='var(--accent)' stroke-width='1.5' stroke-linejoin='round' stroke-linecap='round'/></svg><span class='peak'>pico mar</span></div></td><td class='rankcell' data-s='2'><span class='kd' style='color:var(--good)' title='5/10 grandes en la página 1 de Google'>Accesible</span><span class='big'>5/10 grandes</span></td><td class='euro' data-s='39.96'><b>40€</b></td><td data-s='54'><div class='scorecell'><span class='bar'><i style='width:54%;background:var(--warn)'></i></span><span class='scoren'>54</span></div></td><td><span class='chip' style='color:var(--warn);background:var(--warn-bg)'>Revisar</span></td></tr><tr data-verd='Revisar' data-nicho='crema facial retinol'><td class='l nicho'>crema facial retinol</td><td class='l cat'>belleza</td><td data-s='10.0'>10.0%</td><td data-s='30.0'>30€</td><td class='euro' data-s='3.0'>3.00€</td><td>Media</td><td data-s='13100'>13.100/mes</td><td class='trendcell'><div class='trend'><svg viewBox='0 0 68 20' width='68' height='20' preserveAspectRatio='none' aria-hidden='true'><polyline points='1.0,2.0 7.0,2.0 13.0,2.0 19.0,12.7 25.0,12.7 31.0,12.7 37.0,18.0 43.0,18.0 49.0,18.0 55.0,18.0 61.0,18.0 67.0,18.0' fill='none' stroke='var(--accent)' stroke-width='1.5' stroke-linejoin='round' stroke-linecap='round'/></svg><span class='peak'>pico feb</span></div></td><td class='rankcell' data-s='2'><span class='kd' style='color:var(--good)' title='6/10 grandes en la página 1 de Google'>Accesible</span><span class='big'>6/10 grandes</span></td><td class='euro' data-s='47.16'><b>47€</b></td><td data-s='52'><div class='scorecell'><span class='bar'><i style='width:52%;background:var(--warn)'></i></span><span class='scoren'>52</span></div></td><td><span class='chip' style='color:var(--warn);background:var(--warn-bg)'>Revisar</span></td></tr><tr data-verd='Revisar' data-nicho='mochila portatil'><td class='l nicho'>mochila portatil</td><td class='l cat'>moda</td><td data-s='10.0'>10.0%</td><td data-s='45.0'>45€</td><td class='euro' data-s='4.5'>4.50€</td><td>Media</td><td data-s='8550'>8.550/mes</td><td class='trendcell'><div class='trend'><svg viewBox='0 0 68 20' width='68' height='20' preserveAspectRatio='none' aria-hidden='true'><polyline points='1.0,2.0 7.0,2.0 13.0,12.7 19.0,12.7 25.0,12.7 31.0,18.0 37.0,18.0 43.0,18.0 49.0,18.0 55.0,18.0 61.0,18.0 67.0,18.0' fill='none' stroke='var(--accent)' stroke-width='1.5' stroke-linejoin='round' stroke-linecap='round'/></svg><span class='peak'>pico ene</span></div></td><td class='rankcell' data-s='1'><span class='kd' style='color:var(--warn)' title='7/10 grandes en la página 1 de Google'>Media</span> <span class='aio'>AIO</span><span class='big'>7/10 grandes</span></td><td class='euro' data-s='46.17'><b>46€</b></td><td data-s='46'><div class='scorecell'><span class='bar'><i style='width:46%;background:var(--warn)'></i></span><span class='scoren'>46</span></div></td><td><span class='chip' style='color:var(--warn);background:var(--warn-bg)'>Revisar</span></td></tr><tr data-verd='Revisar' data-nicho='cafetera espresso'><td class='l nicho'>cafetera espresso</td><td class='l cat'>cocina</td><td data-s='4.0'>4.0%</td><td data-s='150.0'>150€</td><td class='euro' data-s='6.0'>6.00€</td><td>Media</td><td data-s='1200'>1.200/mes</td><td class='trendcell'><div class='trend'><svg viewBox='0 0 68 20' width='68' height='20' preserveAspectRatio='none' aria-hidden='true'><polyline points='1.0,12.7 7.0,12.7 13.0,2.0 19.0,2.0 25.0,2.0 31.0,12.7 37.0,12.7 43.0,12.7 49.0,18.0 55.0,18.0 61.0,18.0 67.0,18.0' fill='none' stroke='var(--accent)' stroke-width='1.5' stroke-linejoin='round' stroke-linecap='round'/></svg><span class='peak'>pico abr</span></div></td><td class='rankcell' data-s='1'><span class='kd' style='color:var(--warn)' title='6/10 grandes en la página 1 de Google'>Media</span> <span class='aio'>AIO</span><span class='big'>6/10 grandes</span></td><td class='euro' data-s='8.64'><b>9€</b></td><td data-s='46'><div class='scorecell'><span class='bar'><i style='width:46%;background:var(--warn)'></i></span><span class='scoren'>46</span></div></td><td><span class='chip' style='color:var(--warn);background:var(--warn-bg)'>Revisar</span></td></tr><tr data-verd='Flojo' data-nicho='taladro percutor'><td class='l nicho'>taladro percutor</td><td class='l cat'>herramientas</td><td data-s='3.0'>3.0%</td><td data-s='80.0'>80€</td><td class='euro' data-s='2.4'>2.40€</td><td>Media</td><td data-s='13800'>13.800/mes</td><td class='trendcell'><div class='trend'><svg viewBox='0 0 68 20' width='68' height='20' preserveAspectRatio='none' aria-hidden='true'><polyline points='1.0,12.7 7.0,12.7 13.0,2.0 19.0,2.0 25.0,2.0 31.0,12.7 37.0,12.7 43.0,12.7 49.0,18.0 55.0,18.0 61.0,18.0 67.0,18.0' fill='none' stroke='var(--accent)' stroke-width='1.5' stroke-linejoin='round' stroke-linecap='round'/></svg><span class='peak'>pico abr</span></div></td><td class='rankcell' data-s='1'><span class='kd' style='color:var(--warn)' title='7/10 grandes en la página 1 de Google'>Media</span> <span class='aio'>AIO</span><span class='big'>7/10 grandes</span></td><td class='euro' data-s='39.74399999999999'><b>40€</b></td><td data-s='42'><div class='scorecell'><span class='bar'><i style='width:42%;background:var(--bad)'></i></span><span class='scoren'>42</span></div></td><td><span class='chip' style='color:var(--bad);background:var(--bad-bg)'>Flojo</span></td></tr><tr data-verd='Flojo' data-nicho='cepillo electrico para perros'><td class='l nicho'>cepillo electrico para perros</td><td class='l cat'>mascotas</td><td data-s='4.0'>4.0%</td><td data-s='25.0'>25€</td><td class='euro' data-s='1.0'>1.00€</td><td>Baja</td><td data-s='500'>500/mes</td><td class='trendcell'><div class='trend'><svg viewBox='0 0 68 20' width='68' height='20' preserveAspectRatio='none' aria-hidden='true'><polyline points='1.0,2.0 7.0,2.0 13.0,2.0 19.0,12.7 25.0,12.7 31.0,12.7 37.0,18.0 43.0,18.0 49.0,18.0 55.0,18.0 61.0,18.0 67.0,18.0' fill='none' stroke='var(--accent)' stroke-width='1.5' stroke-linejoin='round' stroke-linecap='round'/></svg><span class='peak'>pico feb</span></div></td><td class='rankcell' data-s='2'><span class='kd' style='color:var(--good)' title='6/10 grandes en la página 1 de Google'>Accesible</span><span class='big'>6/10 grandes</span></td><td class='euro' data-s='0.6'><b>1€</b></td><td data-s='33'><div class='scorecell'><span class='bar'><i style='width:33%;background:var(--bad)'></i></span><span class='scoren'>33</span></div></td><td><span class='chip' style='color:var(--bad);background:var(--bad-bg)'>Flojo</span></td></tr></tbody>
+  </table></div>
+
+  <p class="foot">Score = €/venta (35, satura 15€) + demanda (30, log) + rankeabilidad de la SERP (25) + intención (10). €/mes = demanda × 4% captura × 3% conversión × €/venta. Grandes dominios en <code>BIG_DOMAINS</code> (editable).<br>Edita <code>nichos.csv</code> y <code>COMISIONES</code>, y vuelve a ejecutar.</p>
+</div>
+<script>
+(function(){
+  var table=document.getElementById('radar'); if(!table) return;
+  var tb=table.tBodies[0];
+  var rows=function(){return Array.prototype.slice.call(tb.rows);};
+  // Ordenar al tocar cabecera (numérico por data-s, texto si no).
+  var ths=table.tHead.rows[0].cells, dir={};
+  Array.prototype.forEach.call(ths,function(th,i){
+    th.style.cursor='pointer'; th.title='Ordenar';
+    th.addEventListener('click',function(){
+      var d=dir[i]=-(dir[i]||1);
+      rows().sort(function(a,b){
+        var ca=a.cells[i], cb=b.cells[i];
+        var sa=ca.getAttribute('data-s'), sb=cb.getAttribute('data-s');
+        var va = sa!==null? parseFloat(sa) : ca.textContent.trim().toLowerCase();
+        var vb = sb!==null? parseFloat(sb) : cb.textContent.trim().toLowerCase();
+        if(va<vb) return -1*d; if(va>vb) return 1*d; return 0;
+      }).forEach(function(r){tb.appendChild(r);});
+    });
+  });
+  // Filtrar por veredicto + búsqueda de texto.
+  var cur='all', q='';
+  function apply(){
+    rows().forEach(function(r){
+      var okV = cur==='all' || r.getAttribute('data-verd')===cur;
+      var okQ = !q || r.getAttribute('data-nicho').toLowerCase().indexOf(q)>=0;
+      r.style.display = (okV&&okQ)?'':'none';
+    });
+  }
+  document.querySelectorAll('.fbtn').forEach(function(b){
+    b.addEventListener('click',function(){
+      document.querySelectorAll('.fbtn').forEach(function(x){x.classList.remove('on');});
+      b.classList.add('on'); cur=b.getAttribute('data-f'); apply();
+    });
+  });
+  var s=document.querySelector('.fsearch');
+  if(s) s.addEventListener('input',function(){q=s.value.trim().toLowerCase(); apply();});
+})();
+</script></body></html>
